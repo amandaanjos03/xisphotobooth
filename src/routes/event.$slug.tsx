@@ -634,8 +634,18 @@ function CaptureFlow({
           ref={videoRef}
           playsInline
           muted
-          className="absolute inset-0 size-full object-cover [transform:scaleX(-1)] bg-black"
+          className={`absolute inset-0 size-full object-cover bg-black ${mirror ? "[transform:scaleX(-1)]" : ""}`}
         />
+        <button
+          type="button"
+          onClick={flipCamera}
+          disabled={switching}
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur px-3 py-2 text-white text-sm hover:bg-black/70 transition disabled:opacity-50"
+          title="Alternar câmera"
+        >
+          <RefreshCw className={`size-4 ${switching ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline">Alternar câmera</span>
+        </button>
         {flash && <div className="absolute inset-0 bg-white animate-[pulse_180ms_ease-out]" />}
         {countdown !== null && (
           <div className="absolute inset-0 grid place-items-center bg-black/30">
