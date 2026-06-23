@@ -18,16 +18,16 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-blob px-4">
       <div className="card-soft max-w-md p-8 text-center">
         <h1 className="text-7xl font-display font-bold text-foreground">404</h1>
-        <h2 className="mt-3 text-xl font-semibold">Page not found</h2>
+        <h2 className="mt-3 text-xl font-semibold">Página não encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist.
+          A página que você procura não existe.
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
           >
-            Go home
+            Ir para o início
           </Link>
         </div>
       </div>
@@ -44,16 +44,16 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-blob px-4">
       <div className="card-soft max-w-md p-8 text-center">
-        <h1 className="text-xl font-display font-semibold">Something went wrong</h1>
+        <h1 className="text-xl font-display font-semibold">Ops, algo deu errado</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => { router.invalidate(); reset(); }}
             className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
           >
-            Try again
+            Tentar novamente
           </button>
-          <a href="/" className="rounded-full border border-input bg-background px-5 py-2.5 text-sm font-semibold hover:bg-accent">Go home</a>
+          <a href="/" className="rounded-full border border-input bg-background px-5 py-2.5 text-sm font-semibold hover:bg-accent">Ir para o início</a>
         </div>
       </div>
     </div>
@@ -65,10 +65,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Snapbooth — Multi-Event Photo Booth" },
-      { name: "description", content: "Create events, share QR codes, and let guests capture beautiful framed photo strips." },
-      { property: "og:title", content: "Snapbooth — Multi-Event Photo Booth" },
-      { property: "og:description", content: "Create events, share QR codes, and let guests capture beautiful framed photo strips." },
+      { title: "Xis Photo Booth — Cabine de Fotos para Eventos" },
+      { name: "description", content: "Crie eventos, compartilhe um QR Code e deixe seus convidados tirarem fotos lindas com molduras personalizadas." },
+      { property: "og:title", content: "Xis Photo Booth — Cabine de Fotos para Eventos" },
+      { property: "og:description", content: "Crie eventos, compartilhe um QR Code e deixe seus convidados tirarem fotos lindas com molduras personalizadas." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -87,7 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
