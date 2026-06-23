@@ -25,7 +25,7 @@ type EventRow = {
   created_at: string;
 };
 
-export const Route = createFileRoute("/admin")({
+export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminDashboard,
   head: () => ({ meta: [{ title: "Dashboard — Snapbooth" }] }),
 });

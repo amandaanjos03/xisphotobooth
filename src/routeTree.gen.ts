@@ -9,15 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventSlugRouteImport } from './routes/event.$slug'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as EventSlugGalleryRouteImport } from './routes/event.$slug.gallery'
-import { Route as AdminEventSlugRouteImport } from './routes/admin.event.$slug'
+import { Route as AuthenticatedAdminEventSlugRouteImport } from './routes/_authenticated.admin.event.$slug'
 
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -30,76 +36,98 @@ const EventSlugRoute = EventSlugRouteImport.update({
   path: '/event/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const EventSlugGalleryRoute = EventSlugGalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
   getParentRoute: () => EventSlugRoute,
 } as any)
-const AdminEventSlugRoute = AdminEventSlugRouteImport.update({
-  id: '/event/$slug',
-  path: '/event/$slug',
-  getParentRoute: () => AdminRoute,
-} as any)
+const AuthenticatedAdminEventSlugRoute =
+  AuthenticatedAdminEventSlugRouteImport.update({
+    id: '/event/$slug',
+    path: '/event/$slug',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/event/$slug': typeof EventSlugRouteWithChildren
-  '/admin/event/$slug': typeof AdminEventSlugRoute
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
+  '/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/event/$slug': typeof EventSlugRouteWithChildren
-  '/admin/event/$slug': typeof AdminEventSlugRoute
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
+  '/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/event/$slug': typeof EventSlugRouteWithChildren
-  '/admin/event/$slug': typeof AdminEventSlugRoute
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
+  '/_authenticated/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/admin'
     | '/event/$slug'
-    | '/admin/event/$slug'
     | '/event/$slug/gallery'
+    | '/admin/event/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/admin'
     | '/event/$slug'
-    | '/admin/event/$slug'
     | '/event/$slug/gallery'
+    | '/admin/event/$slug'
   id:
     | '__root__'
     | '/'
-    | '/admin'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/admin'
     | '/event/$slug'
-    | '/admin/event/$slug'
     | '/event/$slug/gallery'
+    | '/_authenticated/admin/event/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRouteWithChildren
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthRoute: typeof AuthRoute
   EventSlugRoute: typeof EventSlugRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -116,6 +144,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/event/$slug/gallery': {
       id: '/event/$slug/gallery'
       path: '/gallery'
@@ -123,25 +158,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventSlugGalleryRouteImport
       parentRoute: typeof EventSlugRoute
     }
-    '/admin/event/$slug': {
-      id: '/admin/event/$slug'
+    '/_authenticated/admin/event/$slug': {
+      id: '/_authenticated/admin/event/$slug'
       path: '/event/$slug'
       fullPath: '/admin/event/$slug'
-      preLoaderRoute: typeof AdminEventSlugRouteImport
-      parentRoute: typeof AdminRoute
+      preLoaderRoute: typeof AuthenticatedAdminEventSlugRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
   }
 }
 
-interface AdminRouteChildren {
-  AdminEventSlugRoute: typeof AdminEventSlugRoute
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminEventSlugRoute: typeof AuthenticatedAdminEventSlugRoute
 }
 
-const AdminRouteChildren: AdminRouteChildren = {
-  AdminEventSlugRoute: AdminEventSlugRoute,
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminEventSlugRoute: AuthenticatedAdminEventSlugRoute,
 }
 
-const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
 
 interface EventSlugRouteChildren {
   EventSlugGalleryRoute: typeof EventSlugGalleryRoute
@@ -157,19 +205,10 @@ const EventSlugRouteWithChildren = EventSlugRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRouteWithChildren,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthRoute: AuthRoute,
   EventSlugRoute: EventSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
