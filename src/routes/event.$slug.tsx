@@ -473,7 +473,7 @@ async function finalizeAndUpload(
   event: EventRow,
   count: number,
 ): Promise<{ id: string; url: string }> {
-  const blob = await composeStrip(shots, event.frame_url, count);
+  const blob = await composeStrip(shots, event.frame_url, count, event.print_layout ?? "portrait");
   const path = `${event.slug}/${Date.now()}.jpg`;
   const url = await uploadAndSign("event-photos", path, blob, "image/jpeg");
   const { data, error } = await supabase
