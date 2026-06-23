@@ -955,7 +955,7 @@ function DoneScreen({
         <p className="mt-2 text-muted-foreground">Sua composição está pronta e foi adicionada ao álbum.</p>
       </div>
 
-      <div className="print-area card-soft p-3 bg-white">
+      <div className={`print-area print-${event.print_layout ?? "portrait"} card-soft p-3 bg-white`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={photo.url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
       </div>
