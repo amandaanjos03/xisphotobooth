@@ -845,8 +845,9 @@ function ShareDialog({
             <QrCode className="size-5" /> Compartilhar cabine
           </DialogTitle>
           <DialogDescription>
-            Os convidados escaneiam este código ou abrem o link e informam a senha do evento{" "}
-            <span className="font-semibold text-foreground">{event?.name}</span>.
+            {event?.requires_code === false
+              ? <>Os convidados acessam a cabine de <span className="font-semibold text-foreground">{event?.name}</span> direto pelo link, sem senha.</>
+              : <>Os convidados escaneiam este código ou abrem o link e informam a senha do evento <span className="font-semibold text-foreground">{event?.name}</span>.</>}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4">
@@ -859,7 +860,12 @@ function ShareDialog({
             )}
           </div>
 
-          {codeToShow ? (
+          {event?.requires_code === false ? (
+            <div className="w-full rounded-xl border border-dashed border-border bg-muted/40 p-3 text-center text-xs text-muted-foreground">
+              <KeyRound className="inline size-3.5 mr-1 -mt-0.5" />
+              Este evento está configurado sem senha.
+            </div>
+          ) : codeToShow ? (
             <div className="w-full rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 text-center">
               <div className="text-xs uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5">
                 <KeyRound className="size-3.5" /> Senha do evento
@@ -874,7 +880,7 @@ function ShareDialog({
           ) : (
             <div className="w-full rounded-xl border border-dashed border-border bg-muted/40 p-3 text-center text-xs text-muted-foreground">
               <KeyRound className="inline size-3.5 mr-1 -mt-0.5" />
-              Este evento foi criado antes do armazenamento de senhas. Crie um novo evento para gerar uma senha visível.
+              Este evento foi criado antes do armazenamento de senhas. Edite o evento para gerar uma nova.
             </div>
           )}
 
