@@ -116,6 +116,15 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
         <Camera className="size-6 sm:size-7" />
         Tirar Fotos
       </button>
+      <div className="mt-6">
+        <Link
+          to="/event/$slug/gallery"
+          params={{ slug: event.slug }}
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-5 py-2.5 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-background transition"
+        >
+          <Images className="size-4" /> Ver galeria do evento
+        </Link>
+      </div>
     </div>
   );
 }
