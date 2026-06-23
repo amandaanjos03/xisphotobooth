@@ -14,6 +14,7 @@ import {
 import { Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode, ExternalLink, Trash2, Images } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
+import xisLogo from "@/assets/xis-logo.png.asset.json";
 
 type EventRow = {
   id: string;
@@ -77,12 +78,9 @@ function AdminDashboard() {
     <div className="min-h-screen bg-blob">
       <header className="border-b border-border/60 backdrop-blur-sm bg-background/60 sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="size-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-sm">
-              <Camera className="size-5" />
-            </div>
-            <div>
-              <div className="font-display text-lg font-bold leading-none">Xis Photo Booth</div>
+          <div className="flex items-center gap-3">
+            <img src={xisLogo.url} alt="Xis Photo Booth" className="h-12 w-auto" />
+            <div className="hidden sm:block">
               <div className="text-xs text-muted-foreground">Painel do Administrador</div>
             </div>
           </div>
