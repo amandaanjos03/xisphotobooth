@@ -14,6 +14,7 @@ import {
 import { Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode, ExternalLink, Trash2, Images } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
+import xisLogo from "@/assets/xis-logo.png.asset.json";
 
 type EventRow = {
   id: string;
