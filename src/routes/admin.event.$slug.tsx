@@ -1,9 +1,11 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Eye, EyeOff, Trash2, Loader2, ImageIcon } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff, Trash2, Loader2, ImageIcon, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
+import { PhotoViewer, downloadPhoto } from "@/components/PhotoViewer";
 
 type EventRow = {
   id: string;
