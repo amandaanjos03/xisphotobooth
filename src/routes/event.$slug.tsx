@@ -818,15 +818,35 @@ function UploadFlow({
   );
 }
 
-// Compose photo strip with frame overlay; supports 1, 2, 3 or 4 photos
-async function composeStrip(shots: string[], frameUrl: string | null, count: number): Promise<Blob> {
+// Compose photo strip with frame overlay; layout adapts to print format.
+async function composeStrip(
+  shots: string[],
+  frameUrl: string | null,
+  count: number,
+  layout: PrintLayout = "portrait",
+): Promise<Blob> {
   const cellW = 600, cellH = 800, gap = 24, pad = 36;
 
   let cols = 1, rows = 1;
-  if (count === 1) { cols = 1; rows = 1; }
-  else if (count === 2) { cols = 1; rows = 2; }
-  else if (count === 3) { cols = 1; rows = 3; }
-  else { cols = 2; rows = 2; }
+  if (layout === "landscape") {
+    // Swap so the composition is wider than tall.
+    if (count === 1) { cols = 1; rows = 1; }
+    else if (count === 2) { cols = 2; rows = 1; }
+    else if (count === 3) { cols = 3; rows = 1; }
+    else { cols = 2; rows = 2; }
+  } else if (layout === "a4") {
+    // A4 portrait — give photos more room across.
+    if (count === 1) { cols = 1; rows = 1; }
+    else if (count === 2) { cols = 1; rows = 2; }
+    else if (count === 3) { cols = 1; rows = 3; }
+    else { cols = 2; rows = 2; }
+  } else {
+    // 10x15 portrait
+    if (count === 1) { cols = 1; rows = 1; }
+    else if (count === 2) { cols = 1; rows = 2; }
+    else if (count === 3) { cols = 1; rows = 3; }
+    else { cols = 2; rows = 2; }
+  }
 
   const W = cellW * cols + gap * (cols - 1) + pad * 2;
   const H = cellH * rows + gap * (rows - 1) + pad * 2;
