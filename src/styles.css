@@ -38,50 +38,50 @@
 
 :root {
   --radius: 1rem;
-  /* Warm, playful editorial palette */
-  --background: oklch(0.98 0.012 80);
-  --foreground: oklch(0.22 0.03 30);
+  /* Xis Photo Booth — deep teal + cream + gold */
+  --background: oklch(0.965 0.05 98);          /* warm cream */
+  --foreground: oklch(0.28 0.05 188);          /* deep teal text */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.03 30);
+  --card-foreground: oklch(0.28 0.05 188);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.03 30);
-  --primary: oklch(0.62 0.20 28); /* warm coral */
-  --primary-foreground: oklch(0.99 0.01 80);
-  --secondary: oklch(0.94 0.03 70);
-  --secondary-foreground: oklch(0.28 0.04 30);
-  --muted: oklch(0.95 0.018 75);
-  --muted-foreground: oklch(0.48 0.03 40);
-  --accent: oklch(0.85 0.13 85); /* sunny yellow */
-  --accent-foreground: oklch(0.22 0.03 30);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.99 0.01 80);
-  --border: oklch(0.90 0.02 70);
-  --input: oklch(0.92 0.02 70);
-  --ring: oklch(0.62 0.20 28);
+  --popover-foreground: oklch(0.28 0.05 188);
+  --primary: oklch(0.42 0.075 188);            /* deep teal */
+  --primary-foreground: oklch(0.97 0.04 98);   /* cream */
+  --secondary: oklch(0.93 0.05 98);            /* light cream */
+  --secondary-foreground: oklch(0.32 0.06 188);
+  --muted: oklch(0.94 0.04 98);
+  --muted-foreground: oklch(0.48 0.04 188);
+  --accent: oklch(0.84 0.155 88);              /* warm gold */
+  --accent-foreground: oklch(0.28 0.05 188);
+  --destructive: oklch(0.58 0.21 28);
+  --destructive-foreground: oklch(0.98 0.02 98);
+  --border: oklch(0.88 0.045 98);
+  --input: oklch(0.90 0.04 98);
+  --ring: oklch(0.42 0.075 188);
 
-  --shadow-soft: 0 10px 30px -10px oklch(0.22 0.03 30 / 0.18);
+  --shadow-soft: 0 14px 36px -16px oklch(0.28 0.05 188 / 0.28);
 }
 
 .dark {
-  --background: oklch(0.16 0.02 30);
-  --foreground: oklch(0.96 0.01 80);
-  --card: oklch(0.22 0.02 30);
-  --card-foreground: oklch(0.96 0.01 80);
-  --popover: oklch(0.22 0.02 30);
-  --popover-foreground: oklch(0.96 0.01 80);
-  --primary: oklch(0.72 0.20 28);
-  --primary-foreground: oklch(0.16 0.02 30);
-  --secondary: oklch(0.28 0.02 30);
-  --secondary-foreground: oklch(0.96 0.01 80);
-  --muted: oklch(0.26 0.02 30);
-  --muted-foreground: oklch(0.70 0.02 40);
-  --accent: oklch(0.78 0.13 85);
-  --accent-foreground: oklch(0.16 0.02 30);
-  --destructive: oklch(0.62 0.22 25);
-  --destructive-foreground: oklch(0.99 0.01 80);
+  --background: oklch(0.20 0.035 188);
+  --foreground: oklch(0.96 0.03 98);
+  --card: oklch(0.26 0.04 188);
+  --card-foreground: oklch(0.96 0.03 98);
+  --popover: oklch(0.26 0.04 188);
+  --popover-foreground: oklch(0.96 0.03 98);
+  --primary: oklch(0.78 0.13 88);              /* gold becomes the primary action in dark */
+  --primary-foreground: oklch(0.20 0.05 188);
+  --secondary: oklch(0.30 0.04 188);
+  --secondary-foreground: oklch(0.96 0.03 98);
+  --muted: oklch(0.28 0.04 188);
+  --muted-foreground: oklch(0.74 0.025 98);
+  --accent: oklch(0.78 0.13 88);
+  --accent-foreground: oklch(0.20 0.05 188);
+  --destructive: oklch(0.64 0.22 28);
+  --destructive-foreground: oklch(0.98 0.02 98);
   --border: oklch(1 0 0 / 0.12);
   --input: oklch(1 0 0 / 0.15);
-  --ring: oklch(0.72 0.20 28);
+  --ring: oklch(0.78 0.13 88);
 }
 
 @layer base {
@@ -96,12 +96,12 @@
   h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
 }
 
-/* Soft animated background blob */
+/* Soft animated background blob — teal + gold over cream */
 @utility bg-blob {
   background:
-    radial-gradient(60% 50% at 15% 10%, oklch(0.85 0.13 85 / 0.55), transparent 70%),
-    radial-gradient(50% 50% at 90% 20%, oklch(0.72 0.18 28 / 0.35), transparent 70%),
-    radial-gradient(70% 60% at 50% 100%, oklch(0.85 0.10 200 / 0.30), transparent 70%),
+    radial-gradient(60% 50% at 15% 10%, oklch(0.84 0.155 88 / 0.45), transparent 70%),
+    radial-gradient(50% 50% at 90% 20%, oklch(0.42 0.075 188 / 0.22), transparent 70%),
+    radial-gradient(70% 60% at 50% 100%, oklch(0.84 0.155 88 / 0.25), transparent 70%),
     var(--color-background);
 }
 
