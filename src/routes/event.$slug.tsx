@@ -9,9 +9,12 @@ import { Label } from "@/components/ui/label";
 import {
   Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft,
   ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
+  RefreshCw, Maximize2, Minimize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
+
+type PrintLayout = "portrait" | "landscape" | "a4";
 
 type EventRow = {
   id: string;
@@ -19,6 +22,9 @@ type EventRow = {
   slug: string;
   date: string | null;
   frame_url: string | null;
+  bg_url: string | null;
+  description: string | null;
+  print_layout: PrintLayout;
   photo_count: number;
 };
 
@@ -27,12 +33,12 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, photo_count")
+      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
     if (!data) throw notFound();
-    return { event: data as EventRow };
+    return { event: data as unknown as EventRow };
   },
   head: ({ loaderData }) => ({
     meta: [
