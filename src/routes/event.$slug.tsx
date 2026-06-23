@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadAndSign } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
-import { Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft, Images } from "lucide-react";
+import { Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import { PhotoViewer } from "@/components/PhotoViewer";
+import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
 
 type EventRow = {
   id: string;
