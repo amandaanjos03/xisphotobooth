@@ -42,6 +42,7 @@ type EventRow = {
   logo_url: string | null;
   logo_position: LogoPosition;
   logo_size: number;
+  requires_code: boolean;
 };
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
@@ -218,11 +219,17 @@ function AdminDashboard() {
                   {ev.description && (
                     <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{ev.description}</p>
                   )}
-                  {ev.access_code && (
-                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
-                      <KeyRound className="size-3.5 text-primary" />
-                      <span className="text-muted-foreground">Senha:</span>
-                      <span className="font-display font-bold tracking-[0.25em] text-primary">{ev.access_code}</span>
+                  {ev.requires_code ? (
+                    ev.access_code ? (
+                      <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
+                        <KeyRound className="size-3.5 text-primary" />
+                        <span className="text-muted-foreground">Senha:</span>
+                        <span className="font-display font-bold tracking-[0.25em] text-primary">{ev.access_code}</span>
+                      </div>
+                    ) : null
+                  ) : (
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-muted border border-border px-3 py-1.5 text-xs text-muted-foreground">
+                      <KeyRound className="size-3.5" /> Sem senha
                     </div>
                   )}
                 </div>
