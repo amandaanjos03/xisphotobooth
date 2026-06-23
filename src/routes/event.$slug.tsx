@@ -284,9 +284,15 @@ function Welcome({
           {new Date(event.date).toLocaleDateString("pt-BR", { dateStyle: "long" })}
         </p>
       )}
-      <p className="mx-auto mt-6 max-w-md text-muted-foreground">
-        Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
-      </p>
+      {event.description ? (
+        <p className="mx-auto mt-6 max-w-xl text-foreground/80 whitespace-pre-wrap">
+          {event.description}
+        </p>
+      ) : (
+        <p className="mx-auto mt-6 max-w-md text-muted-foreground">
+          Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
+        </p>
+      )}
       <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
         <button
           onClick={onStart}
