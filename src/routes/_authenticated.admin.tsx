@@ -834,6 +834,25 @@ function ShareDialog({
               {copied ? "Copiado" : codeToShow ? "Copiar tudo" : "Copiar link"}
             </Button>
           </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="w-full rounded-full gap-2"
+            disabled={!qr}
+            onClick={() => {
+              if (!qr) return;
+              const a = document.createElement("a");
+              a.href = qr;
+              a.download = `qr-${event?.slug ?? "evento"}.png`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            }}
+          >
+            <Download className="size-4" /> Baixar QR Code
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
