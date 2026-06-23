@@ -284,7 +284,7 @@ function CaptureFlow({
   // Sequence: 4 shots, 3s countdown each, 2s pause between
   useEffect(() => {
     if (!ready || error) return;
-    if (shotIndex >= 4) return;
+    if (shotIndex >= event.photo_count) return;
 
     let alive = true;
     const initialDelay = shotIndex === 0 ? 800 : 2000; // pause between
@@ -314,13 +314,13 @@ function CaptureFlow({
     return () => { alive = false; clearTimeout(t0); };
   }, [ready, shotIndex, captureFrame, error]);
 
-  // When 4 shots done, compose & upload
+  // When all shots done, compose & upload
   useEffect(() => {
-    if (shots.length < 4) return;
+    if (shots.length < event.photo_count) return;
     onComposing();
     (async () => {
       try {
-        const blob = await composeStrip(shots, event.frame_url);
+        const blob = await composeStrip(shots, event.frame_url, event.photo_count);
         const path = `${event.slug}/${Date.now()}.jpg`;
         const url = await uploadAndSign("event-photos", path, blob, "image/jpeg");
         await supabase.from("photos").insert({ event_id: event.id, photo_url: url });
@@ -369,7 +369,7 @@ function CaptureFlow({
 
         {/* shots strip */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 p-2 rounded-2xl bg-black/40 backdrop-blur-sm">
-          {[0,1,2,3].map((i) => (
+          {Array.from({ length: event.photo_count }, (_, i) => i).map((i) => (
             <div key={i} className="size-14 sm:size-16 rounded-md overflow-hidden border-2 border-white/70 bg-black/30">
               {shots[i] ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -384,7 +384,7 @@ function CaptureFlow({
 
       <div className="mt-4 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {ready ? `Photo ${Math.min(shotIndex + 1, 4)} of 4` : "Starting camera…"}
+          {ready ? `Foto ${Math.min(shotIndex + 1, event.photo_count)} de ${event.photo_count}` : "Iniciando câmera…"}
         </div>
         <Button variant="ghost" onClick={onCancel} className="rounded-full">Cancel</Button>
       </div>
