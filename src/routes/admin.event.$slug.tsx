@@ -60,22 +60,6 @@ function extractStoragePath(signedUrl: string): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-async function downloadPhoto(url: string, filename: string) {
-  try {
-    const r = await fetch(url);
-    const blob = await r.blob();
-    const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
-  } catch (e) {
-    toast.error((e as Error).message);
-  }
-}
 
 function AdminEventGallery() {
   const { event } = Route.useLoaderData();
