@@ -119,7 +119,7 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
         <Camera className="size-6 sm:size-7" />
         Tirar Fotos
       </button>
-      <RecentPhotos event={event} />
+      <AlbumGrid event={event} />
     </div>
   );
 }
