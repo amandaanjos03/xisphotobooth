@@ -501,13 +501,18 @@ function CaptureFlow({
   const [flash, setFlash] = useState(false);
   const [shots, setShots] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setReady(false);
     (async () => {
       try {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
           audio: false,
         });
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
@@ -526,7 +531,15 @@ function CaptureFlow({
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, []);
+  }, [facing]);
+
+  async function flipCamera() {
+    setSwitching(true);
+    setFacing((f) => (f === "user" ? "environment" : "user"));
+    setTimeout(() => setSwitching(false), 400);
+  }
+
+  const mirror = facing === "user";
 
   const captureFrame = useCallback((): string => {
     const v = videoRef.current!;
@@ -546,12 +559,14 @@ function CaptureFlow({
       sy = (vh - sh) / 2;
     }
     ctx.save();
-    ctx.translate(TARGET_W, 0);
-    ctx.scale(-1, 1);
+    if (mirror) {
+      ctx.translate(TARGET_W, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(v, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
     ctx.restore();
     return canvas.toDataURL("image/jpeg", 0.92);
-  }, []);
+  }, [mirror]);
 
   useEffect(() => {
     if (!ready || error) return;
