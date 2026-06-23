@@ -6,6 +6,7 @@ import { uploadAndSign } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft, Images } from "lucide-react";
 import { toast } from "sonner";
+import { PhotoViewer } from "@/components/PhotoViewer";
 
 type EventRow = {
   id: string;
@@ -13,6 +14,7 @@ type EventRow = {
   slug: string;
   date: string | null;
   frame_url: string | null;
+  photo_count: number;
 };
 
 export const Route = createFileRoute("/event/$slug")({
@@ -20,7 +22,7 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url")
+      .select("id, name, slug, date, frame_url, photo_count")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
