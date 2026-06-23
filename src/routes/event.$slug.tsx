@@ -124,18 +124,21 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
   );
 }
 
-function RecentPhotos({ event }: { event: EventRow }) {
+function AlbumGrid({ event }: { event: EventRow }) {
+  const PAGE_SIZE = 12;
+  const [page, setPage] = useState(0);
   const [viewing, setViewing] = useState<{ id: string; photo_url: string } | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
   const q = useQuery({
-    queryKey: ["photos", event.id, "recent"],
+    queryKey: ["photos", event.id, "all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("photos")
         .select("id, photo_url")
         .eq("event_id", event.id)
         .eq("hidden", false)
-        .order("created_at", { ascending: false })
-        .limit(6);
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data as { id: string; photo_url: string }[];
     },
@@ -151,52 +154,117 @@ function RecentPhotos({ event }: { event: EventRow }) {
   }
 
   const photos = q.data ?? [];
-  if (photos.length === 0) {
-    return (
-      <div className="mt-10">
-        <Link
-          to="/event/$slug/gallery"
-          params={{ slug: event.slug }}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-5 py-2.5 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-background transition"
-        >
-          <Images className="size-4" /> Ver galeria do evento
-        </Link>
-      </div>
-    );
+  if (photos.length === 0) return null;
+
+  const totalPages = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const slice = photos.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
+  async function downloadAll() {
+    setDownloading(true);
+    try {
+      for (let i = 0; i < photos.length; i++) {
+        await downloadPhoto(photos[i].photo_url, `${event.slug}-${i + 1}.jpg`);
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      toast.success("Download iniciado");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
     <div className="mt-14 text-left">
-      <div className="flex items-end justify-between mb-4">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
         <div>
-          <h2 className="font-display text-2xl sm:text-3xl font-bold">Últimas fotos</h2>
-          <p className="text-sm text-muted-foreground">As 6 mais recentes deste evento</p>
+          <h2 className="font-display text-2xl sm:text-3xl font-bold">Álbum do evento</h2>
+          <p className="text-sm text-muted-foreground">
+            {photos.length} foto{photos.length === 1 ? "" : "s"} • Página {safePage + 1} de {totalPages}
+          </p>
         </div>
-        <Link
-          to="/event/$slug/gallery"
-          params={{ slug: event.slug }}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-2 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-background transition"
+        <Button
+          onClick={downloadAll}
+          disabled={downloading}
+          className="rounded-full gap-2"
+          variant="secondary"
         >
-          <Images className="size-4" /> Ver todas
-        </Link>
+          {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+          Baixar todas as imagens
+        </Button>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {photos.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setViewing(p)}
-            className="group relative aspect-square overflow-hidden rounded-xl bg-muted card-soft transition active:scale-95"
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {slice.map((p, i) => {
+          const absoluteIndex = safePage * PAGE_SIZE + i + 1;
+          return (
+            <div
+              key={p.id}
+              className="group relative aspect-square overflow-hidden rounded-xl bg-muted card-soft"
+            >
+              <button
+                onClick={() => setViewing(p)}
+                className="absolute inset-0 transition active:scale-95"
+                aria-label={`Ver foto ${absoluteIndex}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.photo_url}
+                  alt=""
+                  loading="lazy"
+                  className="size-full object-cover transition-transform group-hover:scale-105"
+                />
+              </button>
+              <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition">
+                <button
+                  onClick={() => printPhoto(p.photo_url)}
+                  className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
+                  aria-label="Imprimir"
+                  title="Imprimir"
+                >
+                  <Printer className="size-4" />
+                </button>
+                <button
+                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.jpg`)}
+                  className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
+                  aria-label="Baixar"
+                  title="Baixar"
+                >
+                  <Download className="size-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={safePage === 0}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={p.photo_url}
-              alt=""
-              loading="lazy"
-              className="absolute inset-0 size-full object-cover transition-transform group-hover:scale-105"
-            />
-          </button>
-        ))}
-      </div>
+            <ChevronLeft className="size-4" /> Anterior
+          </Button>
+          <span className="text-sm text-muted-foreground px-2">
+            {safePage + 1} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={safePage >= totalPages - 1}
+          >
+            Próxima <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      )}
+
       <PhotoViewer
         url={viewing?.photo_url ?? null}
         filename={`${event.slug}-${viewing?.id ?? ""}.jpg`}
