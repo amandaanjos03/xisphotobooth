@@ -71,12 +71,14 @@ export const Route = createFileRoute("/event/$slug")({
 });
 
 type Phase = "welcome" | "capture" | "upload" | "composing" | "done";
+type UploadSource = "camera" | "gallery";
 
 const ACCESS_KEY_PREFIX = "xis:access:";
 
 function BoothPage() {
   const { event } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
+  const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
   const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
