@@ -67,18 +67,47 @@ function BoothPage() {
   const [phase, setPhase] = useState<Phase>("welcome");
   const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   // Persist unlock in sessionStorage so refreshing the kiosk doesn't re-prompt the guest.
+  // If signed in as an admin, skip the access gate entirely.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug) === "1") {
       setUnlocked(true);
+      setCheckingAuth(false);
+      return;
     }
+    let cancelled = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!cancelled && userData.user) {
+        const { data: roleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userData.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        if (!cancelled && roleRow) {
+          setUnlocked(true);
+        }
+      }
+      if (!cancelled) setCheckingAuth(false);
+    })();
+    return () => { cancelled = true; };
   }, [event.slug]);
 
   function reset() {
     setFinalPhoto(null);
     setPhase("welcome");
+  }
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-blob grid place-items-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   if (!unlocked) {
