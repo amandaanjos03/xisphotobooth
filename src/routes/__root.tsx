@@ -72,6 +72,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Crie eventos, compartilhe um QR Code e deixe seus convidados tirarem fotos lindas com molduras personalizadas." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Xis Photo Booth — Cabine de Fotos para Eventos" },
+      { name: "twitter:description", content: "Crie eventos, compartilhe um QR Code e deixe seus convidados tirarem fotos lindas com molduras personalizadas." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/TH11qs6yOyc0n8hlM5XQ1Pk7iod2/social-images/social-1782220057423-1000934518.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/TH11qs6yOyc0n8hlM5XQ1Pk7iod2/social-images/social-1782220057423-1000934518.webp" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
