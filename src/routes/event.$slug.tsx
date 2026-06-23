@@ -563,17 +563,12 @@ function DoneScreen({ event, url, onReset }: { event: EventRow; url: string; onR
         <img src={url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
       </div>
 
-      <div className="no-print mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="no-print mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Button onClick={print} className="rounded-full gap-2 h-14 text-base" size="lg">
           <Printer className="size-5" /> Imprimir
         </Button>
         <Button onClick={download} variant="outline" className="rounded-full gap-2 h-14 text-base" size="lg">
           <Download className="size-5" /> Baixar
-        </Button>
-        <Button asChild variant="outline" className="rounded-full gap-2 h-14 text-base" size="lg">
-          <Link to="/event/$slug/gallery" params={{ slug: event.slug }}>
-            <Images className="size-5" /> Ver todas
-          </Link>
         </Button>
         <Button onClick={onReset} variant="secondary" className="rounded-full gap-2 h-14 text-base" size="lg">
           <RotateCcw className="size-5" /> Novas Fotos
