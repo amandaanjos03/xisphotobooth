@@ -121,13 +121,20 @@ function BoothPage() {
   }
 
   return (
-    <div className="min-h-screen bg-blob">
+    <div
+      className="min-h-screen bg-blob bg-cover bg-center bg-no-repeat"
+      style={event.bg_url ? { backgroundImage: `linear-gradient(oklch(0.965 0.05 98 / 0.78), oklch(0.965 0.05 98 / 0.88)), url("${event.bg_url}")` } : undefined}
+    >
+      <PrintPageStyle layout={event.print_layout ?? "portrait"} />
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-between">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Início
           </Link>
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">Xis Photo Booth</div>
+          <div className="flex items-center gap-2">
+            <FullScreenToggle />
+            <div className="text-xs uppercase tracking-widest text-muted-foreground hidden sm:block">Xis Photo Booth</div>
+          </div>
         </div>
       </header>
 
@@ -164,6 +171,48 @@ function BoothPage() {
         <DoneScreen event={event} photo={finalPhoto} onReset={reset} />
       )}
     </div>
+  );
+}
+
+function PrintPageStyle({ layout }: { layout: PrintLayout }) {
+  useEffect(() => {
+    const id = "dyn-print-page";
+    let el = document.getElementById(id) as HTMLStyleElement | null;
+    if (!el) {
+      el = document.createElement("style");
+      el.id = id;
+      document.head.appendChild(el);
+    }
+    const size =
+      layout === "landscape" ? "15cm 10cm" :
+      layout === "a4" ? "A4" :
+      "10cm 15cm";
+    el.innerHTML = `@media print { @page { size: ${size}; margin: 0; } }`;
+    return () => { el?.remove(); };
+  }, [layout]);
+  return null;
+}
+
+function FullScreenToggle() {
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  async function toggle() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+  return (
+    <Button onClick={toggle} variant="ghost" size="sm" className="rounded-full gap-1.5">
+      {isFs ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+      <span className="hidden sm:inline">{isFs ? "Sair da tela cheia" : "Tela cheia"}</span>
+    </Button>
   );
 }
 
