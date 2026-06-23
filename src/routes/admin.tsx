@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode, ExternalLink, Trash2 } from "lucide-react";
+import { Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode, ExternalLink, Trash2, Images } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 
@@ -157,9 +157,14 @@ function AdminDashboard() {
                     </span>
                   </div>
                 </div>
-                <div className="mt-auto flex items-center gap-2">
+                <div className="mt-auto flex items-center gap-2 flex-wrap">
                   <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setShareFor(ev)}>
                     <Share2 className="size-3.5" /> Share
+                  </Button>
+                  <Button asChild variant="secondary" size="sm" className="rounded-full gap-1.5">
+                    <Link to="/admin/event/$slug" params={{ slug: ev.slug }}>
+                      <Images className="size-3.5" /> Gallery
+                    </Link>
                   </Button>
                   <Button asChild variant="ghost" size="sm" className="rounded-full gap-1.5">
                     <Link to="/event/$slug" params={{ slug: ev.slug }}>
