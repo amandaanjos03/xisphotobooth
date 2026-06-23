@@ -835,30 +835,27 @@ function UploadFlow({
   );
 }
 
-// Compose photo strip with frame overlay; layout adapts to print format.
+// Compose photo strip with frame or logo overlay; layout adapts to print format.
 async function composeStrip(
   shots: string[],
-  frameUrl: string | null,
+  event: EventRow,
   count: number,
-  layout: PrintLayout = "portrait",
 ): Promise<Blob> {
+  const layout: PrintLayout = event.print_layout ?? "portrait";
   const cellW = 600, cellH = 800, gap = 24, pad = 36;
 
   let cols = 1, rows = 1;
   if (layout === "landscape") {
-    // Swap so the composition is wider than tall.
     if (count === 1) { cols = 1; rows = 1; }
     else if (count === 2) { cols = 2; rows = 1; }
     else if (count === 3) { cols = 3; rows = 1; }
     else { cols = 2; rows = 2; }
   } else if (layout === "a4") {
-    // A4 portrait — give photos more room across.
     if (count === 1) { cols = 1; rows = 1; }
     else if (count === 2) { cols = 1; rows = 2; }
     else if (count === 3) { cols = 1; rows = 3; }
     else { cols = 2; rows = 2; }
   } else {
-    // 10x15 portrait
     if (count === 1) { cols = 1; rows = 1; }
     else if (count === 2) { cols = 1; rows = 2; }
     else if (count === 3) { cols = 1; rows = 3; }
@@ -899,12 +896,39 @@ async function composeStrip(
     ctx.restore();
   });
 
-  if (frameUrl) {
+  const overlayType = event.overlay_type ?? "frame";
+
+  if (overlayType === "frame" && event.frame_url) {
     try {
-      const frame = await loadImage(frameUrl, true);
+      const frame = await loadImage(event.frame_url, true);
       ctx.drawImage(frame, 0, 0, W, H);
     } catch (e) {
       console.warn("Frame failed to load", e);
+    }
+  } else if (overlayType === "logo" && event.logo_url) {
+    try {
+      const logo = await loadImage(event.logo_url, true);
+      const sizePct = Math.max(5, Math.min(80, event.logo_size ?? 25)) / 100;
+      const position: LogoPosition = event.logo_position ?? "bottom";
+      const horizontal = position === "top" || position === "bottom";
+      const targetW = horizontal ? W * sizePct * (logo.width / logo.height) : W * sizePct;
+      const targetH = horizontal ? H * sizePct : H * sizePct * (logo.height / logo.width);
+      // Constrain so logo never exceeds canvas
+      const maxW = W - pad * 2;
+      const maxH = H - pad * 2;
+      const scale = Math.min(1, maxW / targetW, maxH / targetH);
+      const finalW = targetW * scale;
+      const finalH = targetH * scale;
+      const margin = 24;
+      let x = (W - finalW) / 2;
+      let y = (H - finalH) / 2;
+      if (position === "top") y = margin;
+      else if (position === "bottom") y = H - finalH - margin;
+      else if (position === "left") x = margin;
+      else if (position === "right") x = W - finalW - margin;
+      ctx.drawImage(logo, x, y, finalW, finalH);
+    } catch (e) {
+      console.warn("Logo failed to load", e);
     }
   }
 
@@ -912,6 +936,7 @@ async function composeStrip(
     canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Compose failed")), "image/jpeg", 0.92),
   );
 }
+
 
 function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
   const ir = img.width / img.height, tr = w / h;
