@@ -24,7 +24,11 @@ export type Database = {
           description: string | null
           frame_url: string | null
           id: string
+          logo_position: string
+          logo_size: number
+          logo_url: string | null
           name: string
+          overlay_type: string
           owner_id: string | null
           photo_count: number
           print_layout: string
@@ -39,7 +43,11 @@ export type Database = {
           description?: string | null
           frame_url?: string | null
           id?: string
+          logo_position?: string
+          logo_size?: number
+          logo_url?: string | null
           name: string
+          overlay_type?: string
           owner_id?: string | null
           photo_count?: number
           print_layout?: string
@@ -54,7 +62,11 @@ export type Database = {
           description?: string | null
           frame_url?: string | null
           id?: string
+          logo_position?: string
+          logo_size?: number
+          logo_url?: string | null
           name?: string
+          overlay_type?: string
           owner_id?: string | null
           photo_count?: number
           print_layout?: string
