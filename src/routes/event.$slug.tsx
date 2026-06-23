@@ -312,16 +312,10 @@ function Welcome({
         </button>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
           <button
-            onClick={() => onUpload("camera")}
-            className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
-          >
-            <Camera className="size-4" /> Câmera do celular
-          </button>
-          <button
             onClick={() => onUpload("gallery")}
             className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
           >
-            <Upload className="size-4" /> Galeria / Dispositivo
+            <Upload className="size-4" /> Enviar Foto
           </button>
         </div>
       </div>
