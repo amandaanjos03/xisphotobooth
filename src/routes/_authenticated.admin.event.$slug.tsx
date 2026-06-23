@@ -21,7 +21,7 @@ type PhotoRow = {
   created_at: string;
 };
 
-export const Route = createFileRoute("/admin/event/$slug")({
+export const Route = createFileRoute("/_authenticated/admin/event/$slug")({
   component: AdminEventGallery,
   loader: async ({ params }) => {
     const { data, error } = await supabase
