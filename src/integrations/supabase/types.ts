@@ -45,18 +45,21 @@ export type Database = {
         Row: {
           created_at: string
           event_id: string
+          hidden: boolean
           id: string
           photo_url: string
         }
         Insert: {
           created_at?: string
           event_id: string
+          hidden?: boolean
           id?: string
           photo_url: string
         }
         Update: {
           created_at?: string
           event_id?: string
+          hidden?: boolean
           id?: string
           photo_url?: string
         }
