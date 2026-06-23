@@ -199,9 +199,6 @@ function RecentPhotos({ event }: { event: EventRow }) {
   );
 }
 
-function _WelcomeEnd() {
-  return null;
-
 const TARGET_W = 720;
 const TARGET_H = 960; // 3:4 portrait per shot
 
