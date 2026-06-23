@@ -599,27 +599,6 @@ function CreateEventDialog({
 function EditEventDialog({
   event, onClose, onSaved,
 }: { event: EventRow | null; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState("");
-  const [date, setDate] = useState("");
-  const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
-  const [description, setDescription] = useState("");
-  const [printLayout, setPrintLayout] = useState<PrintLayout>("portrait");
-  const [frame, setFrame] = useState<File | null>(null);
-  const [bg, setBg] = useState<File | null>(null);
-  const [framePreview, setFramePreview] = useState<string | null>(null);
-  const [bgPreview, setBgPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!event) return;
-    setName(event.name);
-    setDate(event.date ?? "");
-    setPhotoCount((event.photo_count as 1 | 2 | 3 | 4) || 4);
-    setDescription(event.description ?? "");
-    setPrintLayout(event.print_layout ?? "portrait");
-    setFrame(null);
-    setBg(null);
-  }, [event]);
 
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
