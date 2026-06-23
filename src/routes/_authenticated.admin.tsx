@@ -360,6 +360,35 @@ function EventFormFields({
       </div>
 
       <div className="space-y-2">
+        <Label>Senha de acesso ao evento</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { v: true, label: "Com senha" },
+            { v: false, label: "Sem senha" },
+          ].map((opt) => (
+            <button
+              key={String(opt.v)}
+              type="button"
+              onClick={() => onChange({ requireCode: opt.v })}
+              className={`h-11 rounded-lg border text-sm font-semibold transition ${
+                values.requireCode === opt.v
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-input bg-background hover:bg-accent"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {values.requireCode
+            ? "Os convidados precisarão informar a senha de 6 dígitos para acessar a cabine."
+            : "Qualquer pessoa com o link poderá acessar a cabine, sem senha."}
+        </p>
+      </div>
+
+
+      <div className="space-y-2">
         <Label>Sobreposição nas fotos</Label>
         <div className="grid grid-cols-2 gap-2">
           {(["frame", "logo"] as OverlayType[]).map((t) => (
