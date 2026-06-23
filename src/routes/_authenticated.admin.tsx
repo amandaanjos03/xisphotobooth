@@ -25,6 +25,7 @@ type EventRow = {
   photo_count: number;
   created_at: string;
   owner_id: string | null;
+  access_code: string | null;
   access_code_hash: string | null;
 };
 
@@ -255,11 +256,6 @@ function CreateEventDialog({
     try {
       const slug = uniqueSlug(name);
       const code = generateAccessCode();
-      const { data: hashed, error: hashErr } = await supabase.rpc(
-        "hash_event_code" as never,
-        { _code: code } as never,
-      );
-      if (hashErr) throw hashErr;
 
       let frame_url: string | null = null;
       if (frame) {
@@ -272,7 +268,7 @@ function CreateEventDialog({
         frame_url,
         photo_count: photoCount,
         owner_id: ownerId,
-        access_code_hash: hashed as unknown as string,
+        access_code: code,
       };
       const { data, error } = await supabase
         .from("events")
