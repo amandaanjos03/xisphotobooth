@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
 
 type PrintLayout = "portrait" | "landscape" | "a4";
+type OverlayType = "frame" | "logo";
+type LogoPosition = "top" | "bottom" | "left" | "right";
 
 type EventRow = {
   id: string;
@@ -26,6 +28,10 @@ type EventRow = {
   description: string | null;
   print_layout: PrintLayout;
   photo_count: number;
+  overlay_type: OverlayType;
+  logo_url: string | null;
+  logo_position: LogoPosition;
+  logo_size: number;
 };
 
 export const Route = createFileRoute("/event/$slug")({
@@ -33,7 +39,7 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count")
+      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
