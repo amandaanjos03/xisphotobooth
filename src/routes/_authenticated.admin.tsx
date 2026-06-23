@@ -14,13 +14,15 @@ import {
 } from "@/components/ui/dialog";
 import {
   Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
-  ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer,
+  ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import xisLogo from "@/assets/xis-logo.png.asset.json";
 
 type PrintLayout = "portrait" | "landscape" | "a4";
+type OverlayType = "frame" | "logo";
+type LogoPosition = "top" | "bottom" | "left" | "right";
 
 type EventRow = {
   id: string;
@@ -36,6 +38,10 @@ type EventRow = {
   owner_id: string | null;
   access_code: string | null;
   access_code_hash: string | null;
+  overlay_type: OverlayType;
+  logo_url: string | null;
+  logo_position: LogoPosition;
+  logo_size: number;
 };
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
