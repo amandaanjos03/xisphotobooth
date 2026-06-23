@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventSlugRouteImport } from './routes/event.$slug'
+import { Route as AdminEventSlugRouteImport } from './routes/admin.event.$slug'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
@@ -28,34 +29,42 @@ const EventSlugRoute = EventSlugRouteImport.update({
   path: '/event/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEventSlugRoute = AdminEventSlugRouteImport.update({
+  id: '/event/$slug',
+  path: '/event/$slug',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/event/$slug': typeof EventSlugRoute
+  '/admin/event/$slug': typeof AdminEventSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/event/$slug': typeof EventSlugRoute
+  '/admin/event/$slug': typeof AdminEventSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/event/$slug': typeof EventSlugRoute
+  '/admin/event/$slug': typeof AdminEventSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/event/$slug'
+  fullPaths: '/' | '/admin' | '/event/$slug' | '/admin/event/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/event/$slug'
-  id: '__root__' | '/' | '/admin' | '/event/$slug'
+  to: '/' | '/admin' | '/event/$slug' | '/admin/event/$slug'
+  id: '__root__' | '/' | '/admin' | '/event/$slug' | '/admin/event/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   EventSlugRoute: typeof EventSlugRoute
 }
 
@@ -82,12 +91,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/event/$slug': {
+      id: '/admin/event/$slug'
+      path: '/event/$slug'
+      fullPath: '/admin/event/$slug'
+      preLoaderRoute: typeof AdminEventSlugRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminEventSlugRoute: typeof AdminEventSlugRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminEventSlugRoute: AdminEventSlugRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   EventSlugRoute: EventSlugRoute,
 }
 export const routeTree = rootRouteImport
