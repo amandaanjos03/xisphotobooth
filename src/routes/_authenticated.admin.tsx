@@ -291,6 +291,7 @@ function EventFormFields({
     overlayType: OverlayType;
     logoPosition: LogoPosition;
     logoSize: number;
+    requireCode: boolean;
     frame: File | null;
     logo: File | null;
     bg: File | null;
