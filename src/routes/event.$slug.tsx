@@ -32,6 +32,7 @@ type EventRow = {
   logo_url: string | null;
   logo_position: LogoPosition;
   logo_size: number;
+  requires_code: boolean;
 };
 
 export const Route = createFileRoute("/event/$slug")({
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size")
+      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
@@ -85,8 +86,14 @@ function BoothPage() {
 
   // Persist unlock in sessionStorage so refreshing the kiosk doesn't re-prompt the guest.
   // If signed in as an admin, skip the access gate entirely.
+  // If the event doesn't require a code, unlock immediately.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!event.requires_code) {
+      setUnlocked(true);
+      setCheckingAuth(false);
+      return;
+    }
     if (window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug) === "1") {
       setUnlocked(true);
       setCheckingAuth(false);
@@ -109,7 +116,7 @@ function BoothPage() {
       if (!cancelled) setCheckingAuth(false);
     })();
     return () => { cancelled = true; };
-  }, [event.slug]);
+  }, [event.slug, event.requires_code]);
 
   function reset() {
     setFinalPhoto(null);
@@ -137,7 +144,7 @@ function BoothPage() {
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-between">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> Início
+            <ArrowLeft className="size-4" /> Entrar
           </Link>
           <div className="flex items-center gap-2">
             <FullScreenToggle />

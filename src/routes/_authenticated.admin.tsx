@@ -42,6 +42,7 @@ type EventRow = {
   logo_url: string | null;
   logo_position: LogoPosition;
   logo_size: number;
+  requires_code: boolean;
 };
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
@@ -218,11 +219,17 @@ function AdminDashboard() {
                   {ev.description && (
                     <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{ev.description}</p>
                   )}
-                  {ev.access_code && (
-                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
-                      <KeyRound className="size-3.5 text-primary" />
-                      <span className="text-muted-foreground">Senha:</span>
-                      <span className="font-display font-bold tracking-[0.25em] text-primary">{ev.access_code}</span>
+                  {ev.requires_code ? (
+                    ev.access_code ? (
+                      <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
+                        <KeyRound className="size-3.5 text-primary" />
+                        <span className="text-muted-foreground">Senha:</span>
+                        <span className="font-display font-bold tracking-[0.25em] text-primary">{ev.access_code}</span>
+                      </div>
+                    ) : null
+                  ) : (
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-muted border border-border px-3 py-1.5 text-xs text-muted-foreground">
+                      <KeyRound className="size-3.5" /> Sem senha
                     </div>
                   )}
                 </div>
@@ -284,6 +291,7 @@ function EventFormFields({
     overlayType: OverlayType;
     logoPosition: LogoPosition;
     logoSize: number;
+    requireCode: boolean;
     frame: File | null;
     logo: File | null;
     bg: File | null;
@@ -350,6 +358,35 @@ function EventFormFields({
         </select>
         <p className="text-xs text-muted-foreground">Define o tamanho da composição final e da página de impressão.</p>
       </div>
+
+      <div className="space-y-2">
+        <Label>Senha de acesso ao evento</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { v: true, label: "Com senha" },
+            { v: false, label: "Sem senha" },
+          ].map((opt) => (
+            <button
+              key={String(opt.v)}
+              type="button"
+              onClick={() => onChange({ requireCode: opt.v })}
+              className={`h-11 rounded-lg border text-sm font-semibold transition ${
+                values.requireCode === opt.v
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-input bg-background hover:bg-accent"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {values.requireCode
+            ? "Os convidados precisarão informar a senha de 6 dígitos para acessar a cabine."
+            : "Qualquer pessoa com o link poderá acessar a cabine, sem senha."}
+        </p>
+      </div>
+
 
       <div className="space-y-2">
         <Label>Sobreposição nas fotos</Label>
@@ -474,6 +511,7 @@ function CreateEventDialog({
   const [overlayType, setOverlayType] = useState<OverlayType>("frame");
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
   const [logoSize, setLogoSize] = useState<number>(25);
+  const [requireCode, setRequireCode] = useState<boolean>(true);
   const [frame, setFrame] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
@@ -509,7 +547,7 @@ function CreateEventDialog({
     setBusy(true);
     try {
       const slug = uniqueSlug(name);
-      const code = generateAccessCode();
+      const code = requireCode ? generateAccessCode() : null;
 
       let frame_url: string | null = null;
       if (overlayType === "frame" && frame) {
@@ -538,6 +576,8 @@ function CreateEventDialog({
         photo_count: photoCount,
         owner_id: ownerId,
         access_code: code,
+        access_code_hash: null,
+        requires_code: requireCode,
       };
       const { data, error } = await supabase
         .from("events")
@@ -547,7 +587,7 @@ function CreateEventDialog({
       if (error) throw error;
       toast.success("Evento criado");
       qc.invalidateQueries({ queryKey: ["events", ownerId] });
-      onCreated(data as unknown as EventRow, code);
+      onCreated(data as unknown as EventRow, code ?? "");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -568,7 +608,7 @@ function CreateEventDialog({
         <EventFormFields
           values={{
             name, date, photoCount, description, printLayout,
-            overlayType, logoPosition, logoSize,
+            overlayType, logoPosition, logoSize, requireCode,
             frame, logo, bg, framePreview, logoPreview, bgPreview,
           }}
           onChange={(p) => {
@@ -580,6 +620,7 @@ function CreateEventDialog({
             if (p.overlayType !== undefined) setOverlayType(p.overlayType);
             if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
             if (p.logoSize !== undefined) setLogoSize(p.logoSize);
+            if (p.requireCode !== undefined) setRequireCode(p.requireCode);
             if (p.frame !== undefined) setFrame(p.frame);
             if (p.logo !== undefined) setLogo(p.logo);
             if (p.bg !== undefined) setBg(p.bg);
@@ -608,6 +649,7 @@ function EditEventDialog({
   const [overlayType, setOverlayType] = useState<OverlayType>("frame");
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
   const [logoSize, setLogoSize] = useState<number>(25);
+  const [requireCode, setRequireCode] = useState<boolean>(true);
   const [frame, setFrame] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
@@ -626,6 +668,7 @@ function EditEventDialog({
     setOverlayType(event.overlay_type ?? "frame");
     setLogoPosition(event.logo_position ?? "bottom");
     setLogoSize(event.logo_size ?? 25);
+    setRequireCode(event.requires_code ?? true);
     setFrame(null);
     setLogo(null);
     setBg(null);
@@ -677,7 +720,14 @@ function EditEventDialog({
         overlay_type: overlayType,
         logo_position: logoPosition,
         logo_size: logoSize,
+        requires_code: requireCode,
       };
+      if (requireCode && !event.access_code) {
+        patch.access_code = generateAccessCode();
+      } else if (!requireCode) {
+        patch.access_code = null;
+        patch.access_code_hash = null;
+      }
       if (frame) {
         patch.frame_url = await uploadAndSign("event-frames", `${event.slug}/${Date.now()}-${frame.name}`, frame, frame.type);
       }
@@ -710,7 +760,7 @@ function EditEventDialog({
           <EventFormFields
             values={{
               name, date, photoCount, description, printLayout,
-              overlayType, logoPosition, logoSize,
+              overlayType, logoPosition, logoSize, requireCode,
               frame, logo, bg, framePreview, logoPreview, bgPreview,
               existingFrameUrl: event?.frame_url ?? null,
               existingLogoUrl: event?.logo_url ?? null,
@@ -725,6 +775,7 @@ function EditEventDialog({
               if (p.overlayType !== undefined) setOverlayType(p.overlayType);
               if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
               if (p.logoSize !== undefined) setLogoSize(p.logoSize);
+              if (p.requireCode !== undefined) setRequireCode(p.requireCode);
               if (p.frame !== undefined) setFrame(p.frame);
               if (p.logo !== undefined) setLogo(p.logo);
               if (p.bg !== undefined) setBg(p.bg);
@@ -794,8 +845,9 @@ function ShareDialog({
             <QrCode className="size-5" /> Compartilhar cabine
           </DialogTitle>
           <DialogDescription>
-            Os convidados escaneiam este código ou abrem o link e informam a senha do evento{" "}
-            <span className="font-semibold text-foreground">{event?.name}</span>.
+            {event?.requires_code === false
+              ? <>Os convidados acessam a cabine de <span className="font-semibold text-foreground">{event?.name}</span> direto pelo link, sem senha.</>
+              : <>Os convidados escaneiam este código ou abrem o link e informam a senha do evento <span className="font-semibold text-foreground">{event?.name}</span>.</>}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4">
@@ -808,7 +860,12 @@ function ShareDialog({
             )}
           </div>
 
-          {codeToShow ? (
+          {event?.requires_code === false ? (
+            <div className="w-full rounded-xl border border-dashed border-border bg-muted/40 p-3 text-center text-xs text-muted-foreground">
+              <KeyRound className="inline size-3.5 mr-1 -mt-0.5" />
+              Este evento está configurado sem senha.
+            </div>
+          ) : codeToShow ? (
             <div className="w-full rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 text-center">
               <div className="text-xs uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5">
                 <KeyRound className="size-3.5" /> Senha do evento
@@ -823,7 +880,7 @@ function ShareDialog({
           ) : (
             <div className="w-full rounded-xl border border-dashed border-border bg-muted/40 p-3 text-center text-xs text-muted-foreground">
               <KeyRound className="inline size-3.5 mr-1 -mt-0.5" />
-              Este evento foi criado antes do armazenamento de senhas. Crie um novo evento para gerar uma senha visível.
+              Este evento foi criado antes do armazenamento de senhas. Edite o evento para gerar uma nova.
             </div>
           )}
 

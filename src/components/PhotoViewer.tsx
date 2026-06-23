@@ -20,26 +20,84 @@ export async function downloadPhoto(url: string, filename: string) {
   }
 }
 
-export function printPhoto(url: string) {
-  const w = window.open("", "_blank", "width=900,height=1200");
-  if (!w) {
-    toast.error("Pop-up bloqueado. Permita pop-ups para imprimir.");
-    return;
+// Print uses a hidden iframe (works on iOS Safari and most mobile browsers,
+// where window.open + document.write is blocked or unreliable). Falls back
+// to opening the image in a new tab so the user can use the native share/print.
+export async function printPhoto(url: string) {
+  try {
+    // Load the image as a blob so the print iframe has a same-origin object URL
+    // (avoids CORS/tainting that breaks print on some browsers).
+    const r = await fetch(url, { mode: "cors" });
+    const blob = await r.blob();
+    const objUrl = URL.createObjectURL(blob);
+
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.opacity = "0";
+    document.body.appendChild(iframe);
+
+    const cleanup = () => {
+      setTimeout(() => {
+        URL.revokeObjectURL(objUrl);
+        iframe.remove();
+      }, 1500);
+    };
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      cleanup();
+      window.open(url, "_blank", "noopener");
+      return;
+    }
+
+    doc.open();
+    doc.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Imprimir foto</title>
+      <style>
+        @page { size: 10cm 15cm; margin: 0; }
+        html,body { margin:0; padding:0; background:#fff; height:100%; }
+        .wrap { width:100vw; height:100vh; display:grid; place-items:center; }
+        img { max-width:100%; max-height:100%; object-fit:contain; display:block; }
+        @media print { .wrap { width:100%; height:100%; } }
+      </style></head><body><div class="wrap"><img id="p" src="${objUrl}" /></div></body></html>`);
+    doc.close();
+
+    const img = doc.getElementById("p") as HTMLImageElement | null;
+    const go = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.open(url, "_blank", "noopener");
+      } finally {
+        cleanup();
+      }
+    };
+    if (img && img.complete && img.naturalWidth > 0) {
+      setTimeout(go, 100);
+    } else if (img) {
+      img.onload = () => setTimeout(go, 100);
+      img.onerror = () => {
+        cleanup();
+        window.open(url, "_blank", "noopener");
+      };
+    } else {
+      cleanup();
+      window.open(url, "_blank", "noopener");
+    }
+  } catch (e) {
+    // Last-resort fallback — open the image so the user can print from the browser UI.
+    try {
+      window.open(url, "_blank", "noopener");
+    } catch {
+      toast.error((e as Error).message || "Não foi possível imprimir");
+    }
   }
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><title>Imprimir foto</title>
-    <style>
-      @page { size: 10cm 15cm; margin: 0; }
-      html,body { margin:0; padding:0; background:#fff; }
-      .wrap { width:100vw; height:100vh; display:grid; place-items:center; }
-      img { max-width:100%; max-height:100%; object-fit:contain; }
-      @media print { .wrap { width:100%; height:100%; } }
-    </style></head><body><div class="wrap"><img src="${url}" crossorigin="anonymous" /></div>
-    <script>
-      const img = document.querySelector('img');
-      function go(){ window.focus(); window.print(); setTimeout(()=>window.close(), 500); }
-      if (img.complete) go(); else img.onload = go;
-    </script></body></html>`);
-  w.document.close();
 }
 
 export function PhotoViewer({
