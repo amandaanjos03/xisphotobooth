@@ -9,9 +9,12 @@ import { Label } from "@/components/ui/label";
 import {
   Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft,
   ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
+  RefreshCw, Maximize2, Minimize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
+
+type PrintLayout = "portrait" | "landscape" | "a4";
 
 type EventRow = {
   id: string;
@@ -19,6 +22,9 @@ type EventRow = {
   slug: string;
   date: string | null;
   frame_url: string | null;
+  bg_url: string | null;
+  description: string | null;
+  print_layout: PrintLayout;
   photo_count: number;
 };
 
@@ -27,12 +33,12 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, photo_count")
+      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
     if (!data) throw notFound();
-    return { event: data as EventRow };
+    return { event: data as unknown as EventRow };
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -115,13 +121,20 @@ function BoothPage() {
   }
 
   return (
-    <div className="min-h-screen bg-blob">
+    <div
+      className="min-h-screen bg-blob bg-cover bg-center bg-no-repeat"
+      style={event.bg_url ? { backgroundImage: `linear-gradient(oklch(0.965 0.05 98 / 0.78), oklch(0.965 0.05 98 / 0.88)), url("${event.bg_url}")` } : undefined}
+    >
+      <PrintPageStyle layout={event.print_layout ?? "portrait"} />
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-between">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Início
           </Link>
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">Xis Photo Booth</div>
+          <div className="flex items-center gap-2">
+            <FullScreenToggle />
+            <div className="text-xs uppercase tracking-widest text-muted-foreground hidden sm:block">Xis Photo Booth</div>
+          </div>
         </div>
       </header>
 
@@ -158,6 +171,48 @@ function BoothPage() {
         <DoneScreen event={event} photo={finalPhoto} onReset={reset} />
       )}
     </div>
+  );
+}
+
+function PrintPageStyle({ layout }: { layout: PrintLayout }) {
+  useEffect(() => {
+    const id = "dyn-print-page";
+    let el = document.getElementById(id) as HTMLStyleElement | null;
+    if (!el) {
+      el = document.createElement("style");
+      el.id = id;
+      document.head.appendChild(el);
+    }
+    const size =
+      layout === "landscape" ? "15cm 10cm" :
+      layout === "a4" ? "A4" :
+      "10cm 15cm";
+    el.innerHTML = `@media print { @page { size: ${size}; margin: 0; } }`;
+    return () => { el?.remove(); };
+  }, [layout]);
+  return null;
+}
+
+function FullScreenToggle() {
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  async function toggle() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+  return (
+    <Button onClick={toggle} variant="ghost" size="sm" className="rounded-full gap-1.5">
+      {isFs ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+      <span className="hidden sm:inline">{isFs ? "Sair da tela cheia" : "Tela cheia"}</span>
+    </Button>
   );
 }
 
@@ -229,9 +284,15 @@ function Welcome({
           {new Date(event.date).toLocaleDateString("pt-BR", { dateStyle: "long" })}
         </p>
       )}
-      <p className="mx-auto mt-6 max-w-md text-muted-foreground">
-        Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
-      </p>
+      {event.description ? (
+        <p className="mx-auto mt-6 max-w-xl text-foreground/80 whitespace-pre-wrap">
+          {event.description}
+        </p>
+      ) : (
+        <p className="mx-auto mt-6 max-w-md text-muted-foreground">
+          Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
+        </p>
+      )}
       <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
         <button
           onClick={onStart}
@@ -412,7 +473,7 @@ async function finalizeAndUpload(
   event: EventRow,
   count: number,
 ): Promise<{ id: string; url: string }> {
-  const blob = await composeStrip(shots, event.frame_url, count);
+  const blob = await composeStrip(shots, event.frame_url, count, event.print_layout ?? "portrait");
   const path = `${event.slug}/${Date.now()}.jpg`;
   const url = await uploadAndSign("event-photos", path, blob, "image/jpeg");
   const { data, error } = await supabase
@@ -440,13 +501,18 @@ function CaptureFlow({
   const [flash, setFlash] = useState(false);
   const [shots, setShots] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setReady(false);
     (async () => {
       try {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
           audio: false,
         });
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
@@ -465,7 +531,15 @@ function CaptureFlow({
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, []);
+  }, [facing]);
+
+  async function flipCamera() {
+    setSwitching(true);
+    setFacing((f) => (f === "user" ? "environment" : "user"));
+    setTimeout(() => setSwitching(false), 400);
+  }
+
+  const mirror = facing === "user";
 
   const captureFrame = useCallback((): string => {
     const v = videoRef.current!;
@@ -485,12 +559,14 @@ function CaptureFlow({
       sy = (vh - sh) / 2;
     }
     ctx.save();
-    ctx.translate(TARGET_W, 0);
-    ctx.scale(-1, 1);
+    if (mirror) {
+      ctx.translate(TARGET_W, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(v, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
     ctx.restore();
     return canvas.toDataURL("image/jpeg", 0.92);
-  }, []);
+  }, [mirror]);
 
   useEffect(() => {
     if (!ready || error) return;
@@ -558,8 +634,18 @@ function CaptureFlow({
           ref={videoRef}
           playsInline
           muted
-          className="absolute inset-0 size-full object-cover [transform:scaleX(-1)] bg-black"
+          className={`absolute inset-0 size-full object-cover bg-black ${mirror ? "[transform:scaleX(-1)]" : ""}`}
         />
+        <button
+          type="button"
+          onClick={flipCamera}
+          disabled={switching}
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur px-3 py-2 text-white text-sm hover:bg-black/70 transition disabled:opacity-50"
+          title="Alternar câmera"
+        >
+          <RefreshCw className={`size-4 ${switching ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline">Alternar câmera</span>
+        </button>
         {flash && <div className="absolute inset-0 bg-white animate-[pulse_180ms_ease-out]" />}
         {countdown !== null && (
           <div className="absolute inset-0 grid place-items-center bg-black/30">
@@ -732,15 +818,35 @@ function UploadFlow({
   );
 }
 
-// Compose photo strip with frame overlay; supports 1, 2, 3 or 4 photos
-async function composeStrip(shots: string[], frameUrl: string | null, count: number): Promise<Blob> {
+// Compose photo strip with frame overlay; layout adapts to print format.
+async function composeStrip(
+  shots: string[],
+  frameUrl: string | null,
+  count: number,
+  layout: PrintLayout = "portrait",
+): Promise<Blob> {
   const cellW = 600, cellH = 800, gap = 24, pad = 36;
 
   let cols = 1, rows = 1;
-  if (count === 1) { cols = 1; rows = 1; }
-  else if (count === 2) { cols = 1; rows = 2; }
-  else if (count === 3) { cols = 1; rows = 3; }
-  else { cols = 2; rows = 2; }
+  if (layout === "landscape") {
+    // Swap so the composition is wider than tall.
+    if (count === 1) { cols = 1; rows = 1; }
+    else if (count === 2) { cols = 2; rows = 1; }
+    else if (count === 3) { cols = 3; rows = 1; }
+    else { cols = 2; rows = 2; }
+  } else if (layout === "a4") {
+    // A4 portrait — give photos more room across.
+    if (count === 1) { cols = 1; rows = 1; }
+    else if (count === 2) { cols = 1; rows = 2; }
+    else if (count === 3) { cols = 1; rows = 3; }
+    else { cols = 2; rows = 2; }
+  } else {
+    // 10x15 portrait
+    if (count === 1) { cols = 1; rows = 1; }
+    else if (count === 2) { cols = 1; rows = 2; }
+    else if (count === 3) { cols = 1; rows = 3; }
+    else { cols = 2; rows = 2; }
+  }
 
   const W = cellW * cols + gap * (cols - 1) + pad * 2;
   const H = cellH * rows + gap * (rows - 1) + pad * 2;
@@ -849,7 +955,7 @@ function DoneScreen({
         <p className="mt-2 text-muted-foreground">Sua composição está pronta e foi adicionada ao álbum.</p>
       </div>
 
-      <div className="print-area card-soft p-3 bg-white">
+      <div className={`print-area print-${event.print_layout ?? "portrait"} card-soft p-3 bg-white`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={photo.url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
       </div>

@@ -18,37 +18,46 @@ export type Database = {
         Row: {
           access_code: string | null
           access_code_hash: string | null
+          bg_url: string | null
           created_at: string
           date: string | null
+          description: string | null
           frame_url: string | null
           id: string
           name: string
           owner_id: string | null
           photo_count: number
+          print_layout: string
           slug: string
         }
         Insert: {
           access_code?: string | null
           access_code_hash?: string | null
+          bg_url?: string | null
           created_at?: string
           date?: string | null
+          description?: string | null
           frame_url?: string | null
           id?: string
           name: string
           owner_id?: string | null
           photo_count?: number
+          print_layout?: string
           slug: string
         }
         Update: {
           access_code?: string | null
           access_code_hash?: string | null
+          bg_url?: string | null
           created_at?: string
           date?: string | null
+          description?: string | null
           frame_url?: string | null
           id?: string
           name?: string
           owner_id?: string | null
           photo_count?: number
+          print_layout?: string
           slug?: string
         }
         Relationships: []

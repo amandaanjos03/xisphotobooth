@@ -112,7 +112,9 @@
   border: 1px solid var(--color-border);
 }
 
-/* Print: only the booth result is printed, at 10x15cm */
+/* Print: only the booth result is printed.
+   Page size is set dynamically via a <style id="dyn-print-page"> tag
+   injected from the component based on the event's print_layout. */
 @media print {
   @page { size: 10cm 15cm; margin: 0; }
   body * { visibility: hidden !important; }
@@ -120,8 +122,6 @@
   .print-area {
     position: fixed !important;
     inset: 0 !important;
-    width: 10cm !important;
-    height: 15cm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
@@ -129,6 +129,9 @@
     align-items: center !important;
     justify-content: center !important;
   }
+  .print-portrait  { width: 10cm !important; height: 15cm !important; }
+  .print-landscape { width: 15cm !important; height: 10cm !important; }
+  .print-a4        { width: 21cm !important; height: 29.7cm !important; }
   .print-area img {
     max-width: 100% !important;
     max-height: 100% !important;

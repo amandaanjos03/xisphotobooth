@@ -7,14 +7,20 @@ import { uploadAndSign } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode, ExternalLink, Trash2, Images, KeyRound, LogOut } from "lucide-react";
+import {
+  Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
+  ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer,
+} from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import xisLogo from "@/assets/xis-logo.png.asset.json";
+
+type PrintLayout = "portrait" | "landscape" | "a4";
 
 type EventRow = {
   id: string;
@@ -22,11 +28,20 @@ type EventRow = {
   slug: string;
   date: string | null;
   frame_url: string | null;
+  bg_url: string | null;
+  description: string | null;
+  print_layout: PrintLayout;
   photo_count: number;
   created_at: string;
   owner_id: string | null;
   access_code: string | null;
   access_code_hash: string | null;
+};
+
+const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
+  portrait: "10x15 Retrato",
+  landscape: "10x15 Paisagem",
+  a4: "A4",
 };
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -35,7 +50,6 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function generateAccessCode(): string {
-  // 6 dígitos numéricos
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
@@ -44,6 +58,7 @@ function AdminDashboard() {
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [shareFor, setShareFor] = useState<{ event: EventRow; code?: string } | null>(null);
+  const [editing, setEditing] = useState<EventRow | null>(null);
 
   const eventsQ = useQuery({
     queryKey: ["events", user.id],
@@ -54,7 +69,7 @@ function AdminDashboard() {
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as EventRow[];
+      return data as unknown as EventRow[];
     },
   });
 
@@ -189,7 +204,14 @@ function AdminDashboard() {
                       <ImageIcon className="size-3.5" />
                       {countsQ.data?.[ev.id] ?? 0} fotos
                     </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Printer className="size-3.5" />
+                      {PRINT_LAYOUT_LABEL[ev.print_layout ?? "portrait"]}
+                    </span>
                   </div>
+                  {ev.description && (
+                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{ev.description}</p>
+                  )}
                   {ev.access_code && (
                     <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
                       <KeyRound className="size-3.5 text-primary" />
@@ -202,10 +224,8 @@ function AdminDashboard() {
                   <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setShareFor({ event: ev })}>
                     <Share2 className="size-3.5" /> Compartilhar
                   </Button>
-                  <Button asChild variant="secondary" size="sm" className="rounded-full gap-1.5">
-                    <Link to="/admin/event/$slug" params={{ slug: ev.slug }}>
-                      <Images className="size-3.5" /> Galeria
-                    </Link>
+                  <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setEditing(ev)}>
+                    <Pencil className="size-3.5" /> Editar
                   </Button>
                   <Button asChild variant="ghost" size="sm" className="rounded-full gap-1.5">
                     <Link to="/event/$slug" params={{ slug: ev.slug }}>
@@ -234,7 +254,122 @@ function AdminDashboard() {
         accessCode={shareFor?.code}
         onClose={() => setShareFor(null)}
       />
+
+      <EditEventDialog
+        event={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["events", user.id] });
+        }}
+      />
     </div>
+  );
+}
+
+function EventFormFields({
+  values, onChange,
+}: {
+  values: {
+    name: string;
+    date: string;
+    photoCount: 1 | 2 | 3 | 4;
+    description: string;
+    printLayout: PrintLayout;
+    frame: File | null;
+    bg: File | null;
+    framePreview: string | null;
+    bgPreview: string | null;
+    existingFrameUrl?: string | null;
+    existingBgUrl?: string | null;
+  };
+  onChange: (patch: Partial<typeof values>) => void;
+}) {
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="name">Nome do evento</Label>
+        <Input id="name" value={values.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Aniversário da Amanda" required />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="date">Data do evento</Label>
+        <Input id="date" type="date" value={values.date} onChange={(e) => onChange({ date: e.target.value })} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="desc">Mensagem de boas-vindas (opcional)</Label>
+        <Textarea
+          id="desc"
+          rows={3}
+          value={values.description}
+          onChange={(e) => onChange({ description: e.target.value })}
+          placeholder="Boas-vindas ao casamento! Capture momentos e divirta-se."
+        />
+        <p className="text-xs text-muted-foreground">Aparece para os convidados na tela inicial da cabine.</p>
+      </div>
+      <div className="space-y-2">
+        <Label>Fotos por moldura</Label>
+        <div className="grid grid-cols-4 gap-2">
+          {[1, 2, 3, 4].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange({ photoCount: n as 1 | 2 | 3 | 4 })}
+              className={`h-12 rounded-lg border text-base font-semibold transition ${
+                values.photoCount === n
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-input bg-background hover:bg-accent"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="layout">Formato de impressão</Label>
+        <select
+          id="layout"
+          value={values.printLayout}
+          onChange={(e) => onChange({ printLayout: e.target.value as PrintLayout })}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="portrait">10x15 Retrato</option>
+          <option value="landscape">10x15 Paisagem</option>
+          <option value="a4">A4</option>
+        </select>
+        <p className="text-xs text-muted-foreground">Define o tamanho da composição final e da página de impressão.</p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="frame">Moldura (PNG transparente)</Label>
+        <Input
+          id="frame"
+          type="file"
+          accept="image/png,image/webp"
+          onChange={(e) => onChange({ frame: e.target.files?.[0] ?? null })}
+        />
+        {(values.framePreview || values.existingFrameUrl) && (
+          <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={values.framePreview ?? values.existingFrameUrl ?? ""} alt="Moldura" className="size-full object-contain" />
+          </div>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="bg">Imagem de fundo do convidado (opcional)</Label>
+        <Input
+          id="bg"
+          type="file"
+          accept="image/*"
+          onChange={(e) => onChange({ bg: e.target.files?.[0] ?? null })}
+        />
+        {(values.bgPreview || values.existingBgUrl) && (
+          <div className="mt-2 aspect-video max-h-40 rounded-lg border border-border overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={values.bgPreview ?? values.existingBgUrl ?? ""} alt="Fundo" className="size-full object-cover" />
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Será aplicada como plano de fundo da página da cabine.</p>
+      </div>
+    </>
   );
 }
 
@@ -245,16 +380,27 @@ function CreateEventDialog({
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
+  const [description, setDescription] = useState("");
+  const [printLayout, setPrintLayout] = useState<PrintLayout>("portrait");
   const [frame, setFrame] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [bg, setBg] = useState<File | null>(null);
+  const [framePreview, setFramePreview] = useState<string | null>(null);
+  const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!frame) { setPreview(null); return; }
+    if (!frame) { setFramePreview(null); return; }
     const url = URL.createObjectURL(frame);
-    setPreview(url);
+    setFramePreview(url);
     return () => URL.revokeObjectURL(url);
   }, [frame]);
+
+  useEffect(() => {
+    if (!bg) { setBgPreview(null); return; }
+    const url = URL.createObjectURL(bg);
+    setBgPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [bg]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -268,11 +414,18 @@ function CreateEventDialog({
       if (frame) {
         frame_url = await uploadAndSign("event-frames", `${slug}/${Date.now()}-${frame.name}`, frame, frame.type);
       }
+      let bg_url: string | null = null;
+      if (bg) {
+        bg_url = await uploadAndSign("event-frames", `${slug}/bg-${Date.now()}-${bg.name}`, bg, bg.type);
+      }
       const insert = {
         name: name.trim(),
         slug,
         date: date || null,
         frame_url,
+        bg_url,
+        description: description.trim() || null,
+        print_layout: printLayout,
         photo_count: photoCount,
         owner_id: ownerId,
         access_code: code,
@@ -285,7 +438,7 @@ function CreateEventDialog({
       if (error) throw error;
       toast.success("Evento criado");
       qc.invalidateQueries({ queryKey: ["events", ownerId] });
-      onCreated(data as EventRow, code);
+      onCreated(data as unknown as EventRow, code);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -294,7 +447,7 @@ function CreateEventDialog({
   }
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="font-display text-2xl">Criar novo evento</DialogTitle>
         <DialogDescription>
@@ -303,52 +456,21 @@ function CreateEventDialog({
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={submit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Nome do evento</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Aniversário da Amanda" required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="date">Data do evento</Label>
-          <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>Fotos por moldura</Label>
-          <div className="grid grid-cols-4 gap-2">
-            {[1, 2, 3, 4].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setPhotoCount(n as 1 | 2 | 3 | 4)}
-                className={`h-12 rounded-lg border text-base font-semibold transition ${
-                  photoCount === n
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-input bg-background hover:bg-accent"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">Quantas fotos serão capturadas e montadas na moldura.</p>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="frame">Moldura (PNG transparente)</Label>
-          <Input
-            id="frame"
-            type="file"
-            accept="image/png,image/webp"
-            onChange={(e) => setFrame(e.target.files?.[0] ?? null)}
-          />
-          {preview && (
-            <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={preview} alt="Pré-visualização da moldura" className="size-full object-contain" />
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            A moldura é aplicada como sobreposição em toda a composição final das fotos.
-          </p>
-        </div>
+        <EventFormFields
+          values={{
+            name, date, photoCount, description, printLayout,
+            frame, bg, framePreview, bgPreview,
+          }}
+          onChange={(p) => {
+            if (p.name !== undefined) setName(p.name);
+            if (p.date !== undefined) setDate(p.date);
+            if (p.photoCount !== undefined) setPhotoCount(p.photoCount);
+            if (p.description !== undefined) setDescription(p.description);
+            if (p.printLayout !== undefined) setPrintLayout(p.printLayout);
+            if (p.frame !== undefined) setFrame(p.frame);
+            if (p.bg !== undefined) setBg(p.bg);
+          }}
+        />
         <DialogFooter>
           <Button type="submit" disabled={busy} className="rounded-full gap-2">
             {busy && <Loader2 className="size-4 animate-spin" />}
@@ -360,6 +482,114 @@ function CreateEventDialog({
   );
 }
 
+function EditEventDialog({
+  event, onClose, onSaved,
+}: { event: EventRow | null; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState("");
+  const [date, setDate] = useState("");
+  const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
+  const [description, setDescription] = useState("");
+  const [printLayout, setPrintLayout] = useState<PrintLayout>("portrait");
+  const [frame, setFrame] = useState<File | null>(null);
+  const [bg, setBg] = useState<File | null>(null);
+  const [framePreview, setFramePreview] = useState<string | null>(null);
+  const [bgPreview, setBgPreview] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!event) return;
+    setName(event.name);
+    setDate(event.date ?? "");
+    setPhotoCount((event.photo_count as 1 | 2 | 3 | 4) || 4);
+    setDescription(event.description ?? "");
+    setPrintLayout(event.print_layout ?? "portrait");
+    setFrame(null);
+    setBg(null);
+  }, [event]);
+
+  useEffect(() => {
+    if (!frame) { setFramePreview(null); return; }
+    const url = URL.createObjectURL(frame);
+    setFramePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [frame]);
+
+  useEffect(() => {
+    if (!bg) { setBgPreview(null); return; }
+    const url = URL.createObjectURL(bg);
+    setBgPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [bg]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!event) return;
+    if (!name.trim()) return toast.error("Informe o nome do evento");
+    setBusy(true);
+    try {
+      const patch: Record<string, unknown> = {
+        name: name.trim(),
+        date: date || null,
+        photo_count: photoCount,
+        description: description.trim() || null,
+        print_layout: printLayout,
+      };
+      if (frame) {
+        patch.frame_url = await uploadAndSign("event-frames", `${event.slug}/${Date.now()}-${frame.name}`, frame, frame.type);
+      }
+      if (bg) {
+        patch.bg_url = await uploadAndSign("event-frames", `${event.slug}/bg-${Date.now()}-${bg.name}`, bg, bg.type);
+      }
+      const { error } = await supabase.from("events").update(patch as never).eq("id", event.id);
+      if (error) throw error;
+      toast.success("Evento atualizado");
+      onSaved();
+      onClose();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!event} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">Editar evento</DialogTitle>
+          <DialogDescription>Atualize os detalhes e personalizações da cabine.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <EventFormFields
+            values={{
+              name, date, photoCount, description, printLayout,
+              frame, bg, framePreview, bgPreview,
+              existingFrameUrl: event?.frame_url ?? null,
+              existingBgUrl: event?.bg_url ?? null,
+            }}
+            onChange={(p) => {
+              if (p.name !== undefined) setName(p.name);
+              if (p.date !== undefined) setDate(p.date);
+              if (p.photoCount !== undefined) setPhotoCount(p.photoCount);
+              if (p.description !== undefined) setDescription(p.description);
+              if (p.printLayout !== undefined) setPrintLayout(p.printLayout);
+              if (p.frame !== undefined) setFrame(p.frame);
+              if (p.bg !== undefined) setBg(p.bg);
+            }}
+          />
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={busy} className="rounded-full gap-2">
+              {busy && <Loader2 className="size-4 animate-spin" />}
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ShareDialog({
   event, accessCode, onClose,
 }: { event: EventRow | null; accessCode?: string; onClose: () => void }) {
@@ -368,7 +598,6 @@ function ShareDialog({
   const url = event && typeof window !== "undefined"
     ? `${window.location.origin}/event/${event.slug}`
     : "";
-  // Prefer the freshly-generated code; fall back to the stored plaintext.
   const codeToShow = accessCode ?? event?.access_code ?? null;
 
   useEffect(() => {
