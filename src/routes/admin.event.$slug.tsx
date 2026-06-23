@@ -1,9 +1,11 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Eye, EyeOff, Trash2, Loader2, ImageIcon } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff, Trash2, Loader2, ImageIcon, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
+import { PhotoViewer, downloadPhoto } from "@/components/PhotoViewer";
 
 type EventRow = {
   id: string;
@@ -58,26 +60,11 @@ function extractStoragePath(signedUrl: string): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-async function downloadPhoto(url: string, filename: string) {
-  try {
-    const r = await fetch(url);
-    const blob = await r.blob();
-    const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
-  } catch (e) {
-    toast.error((e as Error).message);
-  }
-}
 
 function AdminEventGallery() {
   const { event } = Route.useLoaderData();
   const qc = useQueryClient();
+  const [viewing, setViewing] = useState<PhotoRow | null>(null);
 
   const photosQ = useQuery({
     queryKey: ["photos", event.id, "admin"],
@@ -145,7 +132,7 @@ function AdminEventGallery() {
             disabled={photos.length === 0}
             onClick={() => downloadAll(photos)}
           >
-            <Download className="size-3.5" /> Download all
+            <Download className="size-3.5" /> Salvar todas
           </Button>
         </div>
       </header>
@@ -177,15 +164,23 @@ function AdminEventGallery() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {photos.map((p, i) => (
             <article key={p.id} className="card-soft overflow-hidden flex flex-col">
-              <div className={`relative aspect-square bg-muted ${p.hidden ? "opacity-50" : ""}`}>
+              <button
+                type="button"
+                onClick={() => setViewing(p)}
+                className={`relative aspect-square bg-muted w-full text-left transition active:scale-[0.99] ${p.hidden ? "opacity-50" : ""}`}
+                title="Ampliar"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.photo_url} alt="" className="absolute inset-0 size-full object-cover" />
+                <span className="absolute top-2 right-2 rounded-full bg-background/80 backdrop-blur p-1.5">
+                  <Maximize2 className="size-3.5" />
+                </span>
                 {p.hidden && (
                   <div className="absolute top-2 left-2 rounded-full bg-background/90 backdrop-blur px-2.5 py-1 text-xs font-semibold inline-flex items-center gap-1">
-                    <EyeOff className="size-3" /> Hidden
+                    <EyeOff className="size-3" /> Oculta
                   </div>
                 )}
-              </div>
+              </button>
               <div className="p-3 flex items-center gap-1.5">
                 <div className="text-xs text-muted-foreground flex-1 truncate">
                   {new Date(p.created_at).toLocaleString()}
@@ -224,6 +219,12 @@ function AdminEventGallery() {
           ))}
         </div>
       </main>
+      <PhotoViewer
+        url={viewing?.photo_url ?? null}
+        filename={`${event.slug}-${viewing?.id ?? ""}.jpg`}
+        open={!!viewing}
+        onOpenChange={(o) => !o && setViewing(null)}
+      />
     </div>
   );
 }

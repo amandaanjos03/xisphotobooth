@@ -21,6 +21,7 @@ export type Database = {
           frame_url: string | null
           id: string
           name: string
+          photo_count: number
           slug: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           frame_url?: string | null
           id?: string
           name: string
+          photo_count?: number
           slug: string
         }
         Update: {
@@ -37,6 +39,7 @@ export type Database = {
           frame_url?: string | null
           id?: string
           name?: string
+          photo_count?: number
           slug?: string
         }
         Relationships: []

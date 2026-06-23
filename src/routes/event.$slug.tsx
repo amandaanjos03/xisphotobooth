@@ -6,6 +6,7 @@ import { uploadAndSign } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft, Images } from "lucide-react";
 import { toast } from "sonner";
+import { PhotoViewer } from "@/components/PhotoViewer";
 
 type EventRow = {
   id: string;
@@ -13,6 +14,7 @@ type EventRow = {
   slug: string;
   date: string | null;
   frame_url: string | null;
+  photo_count: number;
 };
 
 export const Route = createFileRoute("/event/$slug")({
@@ -20,7 +22,7 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url")
+      .select("id, name, slug, date, frame_url, photo_count")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
@@ -108,7 +110,7 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
         </p>
       )}
       <p className="mx-auto mt-6 max-w-md text-muted-foreground">
-        Get ready — we'll capture 4 photos with a 3-second countdown each. Strike a pose!
+        Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Capriche na pose!
       </p>
       <button
         onClick={onStart}
@@ -123,6 +125,7 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
 }
 
 function RecentPhotos({ event }: { event: EventRow }) {
+  const [viewing, setViewing] = useState<{ id: string; photo_url: string } | null>(null);
   const q = useQuery({
     queryKey: ["photos", event.id, "recent"],
     queryFn: async () => {
@@ -179,10 +182,9 @@ function RecentPhotos({ event }: { event: EventRow }) {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {photos.map((p) => (
-          <Link
+          <button
             key={p.id}
-            to="/event/$slug/gallery"
-            params={{ slug: event.slug }}
+            onClick={() => setViewing(p)}
             className="group relative aspect-square overflow-hidden rounded-xl bg-muted card-soft transition active:scale-95"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -192,9 +194,15 @@ function RecentPhotos({ event }: { event: EventRow }) {
               loading="lazy"
               className="absolute inset-0 size-full object-cover transition-transform group-hover:scale-105"
             />
-          </Link>
+          </button>
         ))}
       </div>
+      <PhotoViewer
+        url={viewing?.photo_url ?? null}
+        filename={`${event.slug}-${viewing?.id ?? ""}.jpg`}
+        open={!!viewing}
+        onOpenChange={(o) => !o && setViewing(null)}
+      />
     </div>
   );
 }
@@ -276,7 +284,7 @@ function CaptureFlow({
   // Sequence: 4 shots, 3s countdown each, 2s pause between
   useEffect(() => {
     if (!ready || error) return;
-    if (shotIndex >= 4) return;
+    if (shotIndex >= event.photo_count) return;
 
     let alive = true;
     const initialDelay = shotIndex === 0 ? 800 : 2000; // pause between
@@ -306,13 +314,13 @@ function CaptureFlow({
     return () => { alive = false; clearTimeout(t0); };
   }, [ready, shotIndex, captureFrame, error]);
 
-  // When 4 shots done, compose & upload
+  // When all shots done, compose & upload
   useEffect(() => {
-    if (shots.length < 4) return;
+    if (shots.length < event.photo_count) return;
     onComposing();
     (async () => {
       try {
-        const blob = await composeStrip(shots, event.frame_url);
+        const blob = await composeStrip(shots, event.frame_url, event.photo_count);
         const path = `${event.slug}/${Date.now()}.jpg`;
         const url = await uploadAndSign("event-photos", path, blob, "image/jpeg");
         await supabase.from("photos").insert({ event_id: event.id, photo_url: url });
@@ -361,7 +369,7 @@ function CaptureFlow({
 
         {/* shots strip */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 p-2 rounded-2xl bg-black/40 backdrop-blur-sm">
-          {[0,1,2,3].map((i) => (
+          {Array.from({ length: event.photo_count }, (_, i) => i).map((i) => (
             <div key={i} className="size-14 sm:size-16 rounded-md overflow-hidden border-2 border-white/70 bg-black/30">
               {shots[i] ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -376,7 +384,7 @@ function CaptureFlow({
 
       <div className="mt-4 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {ready ? `Photo ${Math.min(shotIndex + 1, 4)} of 4` : "Starting camera…"}
+          {ready ? `Foto ${Math.min(shotIndex + 1, event.photo_count)} de ${event.photo_count}` : "Iniciando câmera…"}
         </div>
         <Button variant="ghost" onClick={onCancel} className="rounded-full">Cancel</Button>
       </div>
@@ -384,36 +392,43 @@ function CaptureFlow({
   );
 }
 
-// Compose 2x2 strip with frame overlay
-async function composeStrip(shots: string[], frameUrl: string | null): Promise<Blob> {
+// Compose photo strip with frame overlay; supports 1, 2, 3 or 4 photos
+async function composeStrip(shots: string[], frameUrl: string | null, count: number): Promise<Blob> {
   const cellW = 600, cellH = 800, gap = 24, pad = 36;
-  const W = cellW * 2 + gap + pad * 2;
-  const H = cellH * 2 + gap + pad * 2;
+
+  // Layouts: cols x rows
+  let cols = 1, rows = 1;
+  if (count === 1) { cols = 1; rows = 1; }
+  else if (count === 2) { cols = 1; rows = 2; }
+  else if (count === 3) { cols = 1; rows = 3; }
+  else { cols = 2; rows = 2; }
+
+  const W = cellW * cols + gap * (cols - 1) + pad * 2;
+  const H = cellH * rows + gap * (rows - 1) + pad * 2;
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
 
-  // background
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, "#fff7ee");
   grad.addColorStop(1, "#ffe3cf");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  const positions = [
-    [pad, pad],
-    [pad + cellW + gap, pad],
-    [pad, pad + cellH + gap],
-    [pad + cellW + gap, pad + cellH + gap],
-  ];
-  const imgs = await Promise.all(shots.map((s) => loadImage(s)));
+  const positions: [number, number][] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      positions.push([pad + c * (cellW + gap), pad + r * (cellH + gap)]);
+    }
+  }
+
+  const imgs = await Promise.all(shots.slice(0, count).map((s) => loadImage(s)));
   imgs.forEach((img, i) => {
     const [x, y] = positions[i];
-    // white frame
     ctx.fillStyle = "#fff";
     ctx.fillRect(x - 6, y - 6, cellW + 12, cellH + 12);
-    // cover draw
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, cellW, cellH);
@@ -479,15 +494,20 @@ function DoneScreen({ event, url, onReset }: { event: EventRow; url: string; onR
         <img src={url} alt="Your photo strip" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
       </div>
 
-      <div className="no-print mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="no-print mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Button onClick={print} className="rounded-full gap-2 h-14 text-base" size="lg">
           <Printer className="size-5" /> Imprimir
         </Button>
-        <Button onClick={onReset} variant="secondary" className="rounded-full gap-2 h-14 text-base" size="lg">
-          <RotateCcw className="size-5" /> Tirar Novas Fotos
-        </Button>
         <Button onClick={download} variant="outline" className="rounded-full gap-2 h-14 text-base" size="lg">
           <Download className="size-5" /> Baixar
+        </Button>
+        <Button asChild variant="outline" className="rounded-full gap-2 h-14 text-base" size="lg">
+          <Link to="/event/$slug/gallery" params={{ slug: event.slug }}>
+            <Images className="size-5" /> Ver todas
+          </Link>
+        </Button>
+        <Button onClick={onReset} variant="secondary" className="rounded-full gap-2 h-14 text-base" size="lg">
+          <RotateCcw className="size-5" /> Novas Fotos
         </Button>
       </div>
     </div>

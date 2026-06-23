@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Download, Loader2, ImageIcon, Camera } from "lucide-react";
+import { ArrowLeft, Loader2, ImageIcon, Camera, Download } from "lucide-react";
 import { toast } from "sonner";
+import { PhotoViewer, downloadPhoto } from "@/components/PhotoViewer";
 
 type EventRow = {
   id: string;
@@ -51,22 +51,6 @@ export const Route = createFileRoute("/event/$slug/gallery")({
   ),
 });
 
-async function downloadPhoto(url: string, filename: string) {
-  try {
-    const r = await fetch(url);
-    const blob = await r.blob();
-    const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
-  } catch (e) {
-    toast.error((e as Error).message);
-  }
-}
 
 const PAGE_SIZE = 24;
 
@@ -117,11 +101,41 @@ function PublicGallery() {
           <p className="mt-2 text-muted-foreground">
             {total} memor{total === 1 ? "y" : "ies"} from this event
           </p>
-          <Button asChild className="mt-6 rounded-full gap-2">
-            <Link to="/event/$slug" params={{ slug: event.slug }}>
-              <Camera className="size-4" /> Take new photos
-            </Link>
-          </Button>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            <Button asChild className="rounded-full gap-2">
+              <Link to="/event/$slug" params={{ slug: event.slug }}>
+                <Camera className="size-4" /> Tirar novas fotos
+              </Link>
+            </Button>
+            <Button
+              variant="secondary"
+              className="rounded-full gap-2"
+              disabled={total === 0}
+              onClick={async () => {
+                toast.message(`Baixando ${total} foto${total === 1 ? "" : "s"}…`);
+                const all: { id: string; photo_url: string }[] = [];
+                const STEP = 200;
+                for (let from = 0; from < total; from += STEP) {
+                  const { data, error } = await supabase
+                    .from("photos")
+                    .select("id, photo_url")
+                    .eq("event_id", event.id)
+                    .eq("hidden", false)
+                    .order("created_at", { ascending: false })
+                    .range(from, from + STEP - 1);
+                  if (error) { toast.error(error.message); return; }
+                  all.push(...(data ?? []));
+                }
+                for (let i = 0; i < all.length; i++) {
+                  await downloadPhoto(all[i].photo_url, `${event.slug}-${i + 1}.jpg`);
+                  await new Promise((r) => setTimeout(r, 250));
+                }
+                toast.success("Download concluído");
+              }}
+            >
+              <Download className="size-4" /> Baixar todas
+            </Button>
+          </div>
         </div>
 
         {photosQ.isLoading && (
@@ -183,22 +197,12 @@ function PublicGallery() {
         )}
       </main>
 
-      <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent className="sm:max-w-2xl p-3">
-          {open && (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={open.photo_url} alt="" className="w-full h-auto rounded-lg" />
-              <Button
-                onClick={() => downloadPhoto(open.photo_url, `${event.slug}-${open.id}.jpg`)}
-                className="rounded-full gap-2 w-full"
-              >
-                <Download className="size-4" /> Download
-              </Button>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <PhotoViewer
+        url={open?.photo_url ?? null}
+        filename={`${event.slug}-${open?.id ?? ""}.jpg`}
+        open={!!open}
+        onOpenChange={(o) => !o && setOpen(null)}
+      />
     </div>
   );
 }
