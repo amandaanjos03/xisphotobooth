@@ -68,25 +68,33 @@ async function downloadPhoto(url: string, filename: string) {
   }
 }
 
+const PAGE_SIZE = 24;
+
 function PublicGallery() {
   const { event } = Route.useLoaderData();
   const [open, setOpen] = useState<PhotoRow | null>(null);
+  const [page, setPage] = useState(0);
 
   const photosQ = useQuery({
-    queryKey: ["photos", event.id, "public"],
+    queryKey: ["photos", event.id, "public", page],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error, count } = await supabase
         .from("photos")
-        .select("id, photo_url, created_at")
+        .select("id, photo_url, created_at", { count: "exact" })
         .eq("event_id", event.id)
         .eq("hidden", false)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data as PhotoRow[];
+      return { rows: (data ?? []) as PhotoRow[], count: count ?? 0 };
     },
   });
 
-  const photos = photosQ.data ?? [];
+  const photos = photosQ.data?.rows ?? [];
+  const total = photosQ.data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="min-h-screen bg-blob">
