@@ -55,11 +55,8 @@ function AuthPage() {
   return (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="w-full max-w-md card-soft p-8">
-        <Link to="/" className="inline-flex items-center gap-2 mb-6">
-          <span className="grid place-items-center size-9 rounded-2xl bg-primary text-primary-foreground">
-            <Camera className="size-5" />
-          </span>
-          <span className="font-display text-xl font-bold">Xis Photo Booth</span>
+        <Link to="/" className="flex flex-col items-center gap-3 mb-6">
+          <img src={xisLogo.url} alt="Xis Photo Booth" className="h-24 w-auto" />
         </Link>
         <h1 className="font-display text-3xl font-bold">Acesso do administrador</h1>
         <p className="mt-2 text-sm text-muted-foreground">
