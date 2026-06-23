@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Download, Loader2, ImageIcon, Camera } from "lucide-react";
+import { ArrowLeft, Loader2, ImageIcon, Camera, Download } from "lucide-react";
 import { toast } from "sonner";
+import { PhotoViewer, downloadPhoto } from "@/components/PhotoViewer";
 
 type EventRow = {
   id: string;
