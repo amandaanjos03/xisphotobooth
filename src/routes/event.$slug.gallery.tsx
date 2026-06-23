@@ -115,7 +115,7 @@ function PublicGallery() {
         <div className="mb-8 text-center">
           <h1 className="font-display text-4xl sm:text-5xl font-bold">{event.name}</h1>
           <p className="mt-2 text-muted-foreground">
-            {photos.length} memor{photos.length === 1 ? "y" : "ies"} from this event
+            {total} memor{total === 1 ? "y" : "ies"} from this event
           </p>
           <Button asChild className="mt-6 rounded-full gap-2">
             <Link to="/event/$slug" params={{ slug: event.slug }}>
