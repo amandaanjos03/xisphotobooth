@@ -150,7 +150,7 @@ function BoothPage() {
         <Welcome
           event={event}
           onStart={() => setPhase("capture")}
-          onUpload={() => setPhase("upload")}
+          onUpload={(src) => { setUploadSource(src); setPhase("upload"); }}
         />
       )}
       {phase === "capture" && (
@@ -164,6 +164,7 @@ function BoothPage() {
       {phase === "upload" && (
         <UploadFlow
           event={event}
+          source={uploadSource}
           onDone={(photo) => { setFinalPhoto(photo); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
