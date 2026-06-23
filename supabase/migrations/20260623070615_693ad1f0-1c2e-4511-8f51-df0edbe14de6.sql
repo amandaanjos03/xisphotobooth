@@ -1,0 +1,1 @@
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS photo_count smallint NOT NULL DEFAULT 4 CHECK (photo_count BETWEEN 1 AND 4);
