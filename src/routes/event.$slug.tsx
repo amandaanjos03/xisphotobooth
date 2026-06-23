@@ -699,9 +699,10 @@ function CaptureFlow({
 }
 
 function UploadFlow({
-  event, onDone, onCancel, onComposing,
+  event, source, onDone, onCancel, onComposing,
 }: {
   event: EventRow;
+  source: UploadSource;
   onDone: (photo: { id: string; url: string }) => void;
   onCancel: () => void;
   onComposing: () => void;
