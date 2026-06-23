@@ -621,6 +621,37 @@ function EditEventDialog({
     setBg(null);
   }, [event]);
 
+  const [name, setName] = useState("");
+  const [date, setDate] = useState("");
+  const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
+  const [description, setDescription] = useState("");
+  const [printLayout, setPrintLayout] = useState<PrintLayout>("portrait");
+  const [overlayType, setOverlayType] = useState<OverlayType>("frame");
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
+  const [logoSize, setLogoSize] = useState<number>(25);
+  const [frame, setFrame] = useState<File | null>(null);
+  const [logo, setLogo] = useState<File | null>(null);
+  const [bg, setBg] = useState<File | null>(null);
+  const [framePreview, setFramePreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [bgPreview, setBgPreview] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!event) return;
+    setName(event.name);
+    setDate(event.date ?? "");
+    setPhotoCount((event.photo_count as 1 | 2 | 3 | 4) || 4);
+    setDescription(event.description ?? "");
+    setPrintLayout(event.print_layout ?? "portrait");
+    setOverlayType(event.overlay_type ?? "frame");
+    setLogoPosition(event.logo_position ?? "bottom");
+    setLogoSize(event.logo_size ?? 25);
+    setFrame(null);
+    setLogo(null);
+    setBg(null);
+  }, [event]);
+
   useEffect(() => {
     if (!frame) { setFramePreview(null); return; }
     const url = URL.createObjectURL(frame);
@@ -629,11 +660,28 @@ function EditEventDialog({
   }, [frame]);
 
   useEffect(() => {
+    if (!logo) { setLogoPreview(null); return; }
+    const url = URL.createObjectURL(logo);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logo]);
+
+  useEffect(() => {
     if (!bg) { setBgPreview(null); return; }
     const url = URL.createObjectURL(bg);
     setBgPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [bg]);
+
+  async function regenerateCode() {
+    if (!event) return;
+    if (!confirm("Gerar uma nova senha para este evento? A anterior deixará de funcionar.")) return;
+    const newCode = generateAccessCode();
+    const { error } = await supabase.from("events").update({ access_code: newCode } as never).eq("id", event.id);
+    if (error) return toast.error(error.message);
+    toast.success(`Nova senha: ${newCode}`);
+    onSaved();
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -647,9 +695,15 @@ function EditEventDialog({
         photo_count: photoCount,
         description: description.trim() || null,
         print_layout: printLayout,
+        overlay_type: overlayType,
+        logo_position: logoPosition,
+        logo_size: logoSize,
       };
       if (frame) {
         patch.frame_url = await uploadAndSign("event-frames", `${event.slug}/${Date.now()}-${frame.name}`, frame, frame.type);
+      }
+      if (logo) {
+        patch.logo_url = await uploadAndSign("event-frames", `${event.slug}/logo-${Date.now()}-${logo.name}`, logo, logo.type);
       }
       if (bg) {
         patch.bg_url = await uploadAndSign("event-frames", `${event.slug}/bg-${Date.now()}-${bg.name}`, bg, bg.type);
@@ -677,8 +731,10 @@ function EditEventDialog({
           <EventFormFields
             values={{
               name, date, photoCount, description, printLayout,
-              frame, bg, framePreview, bgPreview,
+              overlayType, logoPosition, logoSize,
+              frame, logo, bg, framePreview, logoPreview, bgPreview,
               existingFrameUrl: event?.frame_url ?? null,
+              existingLogoUrl: event?.logo_url ?? null,
               existingBgUrl: event?.bg_url ?? null,
             }}
             onChange={(p) => {
@@ -687,10 +743,26 @@ function EditEventDialog({
               if (p.photoCount !== undefined) setPhotoCount(p.photoCount);
               if (p.description !== undefined) setDescription(p.description);
               if (p.printLayout !== undefined) setPrintLayout(p.printLayout);
+              if (p.overlayType !== undefined) setOverlayType(p.overlayType);
+              if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
+              if (p.logoSize !== undefined) setLogoSize(p.logoSize);
               if (p.frame !== undefined) setFrame(p.frame);
+              if (p.logo !== undefined) setLogo(p.logo);
               if (p.bg !== undefined) setBg(p.bg);
             }}
           />
+          {event?.access_code && (
+            <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center gap-3">
+              <KeyRound className="size-4 text-primary" />
+              <div className="flex-1">
+                <div className="text-xs text-muted-foreground">Senha atual</div>
+                <div className="font-display font-bold tracking-[0.3em] text-primary">{event.access_code}</div>
+              </div>
+              <Button type="button" size="sm" variant="secondary" className="rounded-full gap-1.5" onClick={regenerateCode}>
+                <RefreshCw className="size-3.5" /> Gerar nova
+              </Button>
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={busy} className="rounded-full gap-2">
