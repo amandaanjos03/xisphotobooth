@@ -11,7 +11,9 @@ type EventRow = {
   id: string;
   name: string;
   slug: string;
+  owner_id: string | null;
 };
+
 
 type PhotoRow = {
   id: string;
