@@ -157,6 +157,30 @@ function PublicGallery() {
             </button>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <Button
+              variant="secondary"
+              className="rounded-full"
+              disabled={page === 0 || photosQ.isFetching}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground tabular-nums">
+              Página {page + 1} de {totalPages}
+            </span>
+            <Button
+              variant="secondary"
+              className="rounded-full"
+              disabled={page >= totalPages - 1 || photosQ.isFetching}
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            >
+              Próxima
+            </Button>
+          </div>
+        )}
       </main>
 
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
