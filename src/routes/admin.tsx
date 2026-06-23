@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode, ExternalLink, Trash2 } from "lucide-react";
+import { Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode, ExternalLink, Trash2, Images } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 

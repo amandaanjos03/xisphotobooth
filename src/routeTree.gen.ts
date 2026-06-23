@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventSlugRouteImport } from './routes/event.$slug'
+import { Route as EventSlugGalleryRouteImport } from './routes/event.$slug.gallery'
 import { Route as AdminEventSlugRouteImport } from './routes/admin.event.$slug'
 
 const AdminRoute = AdminRouteImport.update({
@@ -29,6 +30,11 @@ const EventSlugRoute = EventSlugRouteImport.update({
   path: '/event/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventSlugGalleryRoute = EventSlugGalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => EventSlugRoute,
+} as any)
 const AdminEventSlugRoute = AdminEventSlugRouteImport.update({
   id: '/event/$slug',
   path: '/event/$slug',
@@ -38,34 +44,53 @@ const AdminEventSlugRoute = AdminEventSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/event/$slug': typeof EventSlugRoute
+  '/event/$slug': typeof EventSlugRouteWithChildren
   '/admin/event/$slug': typeof AdminEventSlugRoute
+  '/event/$slug/gallery': typeof EventSlugGalleryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/event/$slug': typeof EventSlugRoute
+  '/event/$slug': typeof EventSlugRouteWithChildren
   '/admin/event/$slug': typeof AdminEventSlugRoute
+  '/event/$slug/gallery': typeof EventSlugGalleryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/event/$slug': typeof EventSlugRoute
+  '/event/$slug': typeof EventSlugRouteWithChildren
   '/admin/event/$slug': typeof AdminEventSlugRoute
+  '/event/$slug/gallery': typeof EventSlugGalleryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/event/$slug' | '/admin/event/$slug'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/event/$slug'
+    | '/admin/event/$slug'
+    | '/event/$slug/gallery'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/event/$slug' | '/admin/event/$slug'
-  id: '__root__' | '/' | '/admin' | '/event/$slug' | '/admin/event/$slug'
+  to:
+    | '/'
+    | '/admin'
+    | '/event/$slug'
+    | '/admin/event/$slug'
+    | '/event/$slug/gallery'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/event/$slug'
+    | '/admin/event/$slug'
+    | '/event/$slug/gallery'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  EventSlugRoute: typeof EventSlugRoute
+  EventSlugRoute: typeof EventSlugRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -91,6 +116,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/event/$slug/gallery': {
+      id: '/event/$slug/gallery'
+      path: '/gallery'
+      fullPath: '/event/$slug/gallery'
+      preLoaderRoute: typeof EventSlugGalleryRouteImport
+      parentRoute: typeof EventSlugRoute
+    }
     '/admin/event/$slug': {
       id: '/admin/event/$slug'
       path: '/event/$slug'
@@ -111,10 +143,22 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface EventSlugRouteChildren {
+  EventSlugGalleryRoute: typeof EventSlugGalleryRoute
+}
+
+const EventSlugRouteChildren: EventSlugRouteChildren = {
+  EventSlugGalleryRoute: EventSlugGalleryRoute,
+}
+
+const EventSlugRouteWithChildren = EventSlugRoute._addFileChildren(
+  EventSlugRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  EventSlugRoute: EventSlugRoute,
+  EventSlugRoute: EventSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
