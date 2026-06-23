@@ -31,23 +31,23 @@ export const Route = createFileRoute("/event/$slug")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: loaderData ? `${loaderData.event.name} — Photo Booth` : "Photo Booth" },
-      { name: "description", content: "Tap, smile, and capture a memory." },
+      { title: loaderData ? `${loaderData.event.name} — Xis Photo Booth` : "Xis Photo Booth" },
+      { name: "description", content: "Sorria e capture uma lembrança." },
     ],
   }),
   notFoundComponent: () => (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="card-soft p-8 max-w-md text-center">
-        <h1 className="font-display text-3xl font-bold">Event not found</h1>
-        <p className="mt-2 text-muted-foreground">This photo booth link is invalid or has been removed.</p>
-        <Button asChild className="mt-6 rounded-full"><Link to="/admin">Go to dashboard</Link></Button>
+        <h1 className="font-display text-3xl font-bold">Evento não encontrado</h1>
+        <p className="mt-2 text-muted-foreground">Este link de cabine é inválido ou foi removido.</p>
+        <Button asChild className="mt-6 rounded-full"><Link to="/admin">Ir para o painel</Link></Button>
       </div>
     </div>
   ),
   errorComponent: ({ error }) => (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="card-soft p-8 max-w-md text-center">
-        <h1 className="font-display text-2xl font-bold">Something went wrong</h1>
+        <h1 className="font-display text-2xl font-bold">Ops, algo deu errado</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
       </div>
     </div>
@@ -71,9 +71,9 @@ function BoothPage() {
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-between">
           <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> Dashboard
+            <ArrowLeft className="size-4" /> Painel
           </Link>
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">Snapbooth</div>
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">Xis Photo Booth</div>
         </div>
       </header>
 
@@ -89,7 +89,7 @@ function BoothPage() {
       {phase === "composing" && (
         <div className="grid place-items-center py-32 text-muted-foreground">
           <Loader2 className="size-8 animate-spin" />
-          <p className="mt-4 font-display text-lg">Composing your photo strip…</p>
+          <p className="mt-4 font-display text-lg">Montando sua composição…</p>
         </div>
       )}
       {phase === "done" && finalUrl && <DoneScreen event={event} url={finalUrl} onReset={reset} />}
@@ -101,12 +101,12 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-20 text-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
-        <Camera className="size-3.5" /> Photo Booth
+        <Camera className="size-3.5" /> Cabine de Fotos
       </div>
       <h1 className="mt-6 font-display text-5xl sm:text-7xl font-bold leading-tight">{event.name}</h1>
       {event.date && (
         <p className="mt-3 text-muted-foreground text-lg">
-          {new Date(event.date).toLocaleDateString(undefined, { dateStyle: "long" })}
+          {new Date(event.date).toLocaleDateString("pt-BR", { dateStyle: "long" })}
         </p>
       )}
       <p className="mx-auto mt-6 max-w-md text-muted-foreground">
@@ -114,7 +114,7 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
       </p>
       <button
         onClick={onStart}
-        className="mt-10 inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.62_0.20_28/0.5)] transition active:scale-95 hover:opacity-95"
+        className="mt-10 inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.42_0.075_188/0.55)] transition active:scale-95 hover:opacity-95"
       >
         <Camera className="size-6 sm:size-7" />
         Tirar Fotos
@@ -244,7 +244,7 @@ function CaptureFlow({
         }
         setReady(true);
       } catch (e) {
-        setError((e as Error).message || "Camera access denied");
+        setError((e as Error).message || "Acesso à câmera negado");
       }
     })();
     return () => {
@@ -337,10 +337,10 @@ function CaptureFlow({
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <div className="card-soft p-8">
-          <h2 className="font-display text-2xl font-bold">Camera unavailable</h2>
+          <h2 className="font-display text-2xl font-bold">Câmera indisponível</h2>
           <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-          <p className="mt-2 text-sm text-muted-foreground">Please allow camera access and try again.</p>
-          <Button onClick={onCancel} className="mt-6 rounded-full">Back</Button>
+          <p className="mt-2 text-sm text-muted-foreground">Permita o acesso à câmera e tente novamente.</p>
+          <Button onClick={onCancel} className="mt-6 rounded-full">Voltar</Button>
         </div>
       </div>
     );
@@ -386,7 +386,7 @@ function CaptureFlow({
         <div className="text-sm text-muted-foreground">
           {ready ? `Foto ${Math.min(shotIndex + 1, event.photo_count)} de ${event.photo_count}` : "Iniciando câmera…"}
         </div>
-        <Button variant="ghost" onClick={onCancel} className="rounded-full">Cancel</Button>
+        <Button variant="ghost" onClick={onCancel} className="rounded-full">Cancelar</Button>
       </div>
     </div>
   );
@@ -412,10 +412,11 @@ async function composeStrip(shots: string[], frameUrl: string | null, count: num
   const ctx = canvas.getContext("2d")!;
 
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "#fff7ee");
-  grad.addColorStop(1, "#ffe3cf");
+  grad.addColorStop(0, "#fdf6d9");
+  grad.addColorStop(1, "#f1e3a8");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
+
 
   const positions: [number, number][] = [];
   for (let r = 0; r < rows; r++) {
@@ -485,13 +486,13 @@ function DoneScreen({ event, url, onReset }: { event: EventRow; url: string; onR
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
       <div className="no-print text-center mb-6">
-        <h2 className="font-display text-3xl sm:text-4xl font-bold">Looking great! ✨</h2>
-        <p className="mt-2 text-muted-foreground">Your photo strip is ready.</p>
+        <h2 className="font-display text-3xl sm:text-4xl font-bold">Ficou incrível! ✨</h2>
+        <p className="mt-2 text-muted-foreground">Sua composição está pronta.</p>
       </div>
 
       <div className="print-area card-soft p-3 bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="Your photo strip" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
+        <img src={url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
       </div>
 
       <div className="no-print mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">

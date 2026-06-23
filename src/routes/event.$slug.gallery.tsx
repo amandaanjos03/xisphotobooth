@@ -32,19 +32,19 @@ export const Route = createFileRoute("/event/$slug/gallery")({
     return { event: data as EventRow };
   },
   head: ({ loaderData }) => ({
-    meta: [{ title: loaderData ? `${loaderData.event.name} — Gallery` : "Gallery" }],
+    meta: [{ title: loaderData ? `${loaderData.event.name} — Galeria` : "Galeria" }],
   }),
   notFoundComponent: () => (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="card-soft p-8 max-w-md text-center">
-        <h1 className="font-display text-3xl font-bold">Event not found</h1>
+        <h1 className="font-display text-3xl font-bold">Evento não encontrado</h1>
       </div>
     </div>
   ),
   errorComponent: ({ error }) => (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="card-soft p-8 max-w-md text-center">
-        <h1 className="font-display text-2xl font-bold">Something went wrong</h1>
+        <h1 className="font-display text-2xl font-bold">Ops, algo deu errado</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
       </div>
     </div>
@@ -89,9 +89,9 @@ function PublicGallery() {
             params={{ slug: event.slug }}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="size-4" /> Booth
+            <ArrowLeft className="size-4" /> Cabine
           </Link>
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">Gallery</div>
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">Galeria</div>
         </div>
       </header>
 
@@ -99,7 +99,7 @@ function PublicGallery() {
         <div className="mb-8 text-center">
           <h1 className="font-display text-4xl sm:text-5xl font-bold">{event.name}</h1>
           <p className="mt-2 text-muted-foreground">
-            {total} memor{total === 1 ? "y" : "ies"} from this event
+            {total} {total === 1 ? "lembrança" : "lembranças"} deste evento
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
             <Button asChild className="rounded-full gap-2">
@@ -149,8 +149,8 @@ function PublicGallery() {
             <div className="mx-auto mb-4 size-14 rounded-2xl bg-accent grid place-items-center">
               <ImageIcon className="size-7 text-accent-foreground" />
             </div>
-            <h2 className="font-display text-2xl font-bold">No photos yet</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Be the first to snap a memory!</p>
+            <h2 className="font-display text-2xl font-bold">Nenhuma foto ainda</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Seja o primeiro a registrar uma lembrança!</p>
           </div>
         )}
 

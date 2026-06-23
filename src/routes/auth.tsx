@@ -11,7 +11,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
-  head: () => ({ meta: [{ title: "Sign in — Snapbooth" }] }),
+  head: () => ({ meta: [{ title: "Entrar — Xis Photo Booth" }] }),
 });
 
 function AuthPage() {
@@ -32,7 +32,7 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Signed in");
+    toast.success("Você entrou com sucesso");
     router.navigate({ to: "/admin", replace: true });
   }
 
@@ -47,7 +47,7 @@ function AuthPage() {
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success(
-      "Account created. If this is the first account, ask the project owner to grant the admin role.",
+      "Conta criada. Peça a um administrador existente para conceder permissão de admin.",
     );
   }
 
@@ -58,31 +58,31 @@ function AuthPage() {
           <span className="grid place-items-center size-9 rounded-2xl bg-primary text-primary-foreground">
             <Camera className="size-5" />
           </span>
-          <span className="font-display text-xl font-bold">Snapbooth</span>
+          <span className="font-display text-xl font-bold">Xis Photo Booth</span>
         </Link>
-        <h1 className="font-display text-3xl font-bold">Admin access</h1>
+        <h1 className="font-display text-3xl font-bold">Acesso do administrador</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Sign in to manage events. Attendees don't need an account to use the booth.
+          Entre para gerenciar eventos. Convidados não precisam de conta para usar a cabine.
         </p>
 
         <Tabs defaultValue="signin" className="mt-6">
           <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="signin">Sign in</TabsTrigger>
-            <TabsTrigger value="signup">Sign up</TabsTrigger>
+            <TabsTrigger value="signin">Entrar</TabsTrigger>
+            <TabsTrigger value="signup">Criar conta</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signin">
             <form onSubmit={signIn} className="space-y-4 mt-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email-in">Email</Label>
+                <Label htmlFor="email-in">E-mail</Label>
                 <Input id="email-in" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="pw-in">Password</Label>
+                <Label htmlFor="pw-in">Senha</Label>
                 <Input id="pw-in" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
               </div>
               <Button type="submit" disabled={busy} className="w-full rounded-full">
-                {busy ? <Loader2 className="size-4 animate-spin" /> : "Sign in"}
+                {busy ? <Loader2 className="size-4 animate-spin" /> : "Entrar"}
               </Button>
             </form>
           </TabsContent>
@@ -90,18 +90,18 @@ function AuthPage() {
           <TabsContent value="signup">
             <form onSubmit={signUp} className="space-y-4 mt-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email-up">Email</Label>
+                <Label htmlFor="email-up">E-mail</Label>
                 <Input id="email-up" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="pw-up">Password</Label>
+                <Label htmlFor="pw-up">Senha</Label>
                 <Input id="pw-up" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
               </div>
               <Button type="submit" disabled={busy} variant="secondary" className="w-full rounded-full">
-                {busy ? <Loader2 className="size-4 animate-spin" /> : "Create account"}
+                {busy ? <Loader2 className="size-4 animate-spin" /> : "Criar conta"}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                New accounts have no admin role by default. An existing admin must grant it.
+                Novas contas não têm permissão de admin. Um administrador existente precisa concedê-la.
               </p>
             </form>
           </TabsContent>

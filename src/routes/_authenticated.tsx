@@ -39,7 +39,7 @@ function AuthedLayout() {
 
   async function signOut() {
     await supabase.auth.signOut();
-    toast.success("Signed out");
+    toast.success("Você saiu da sua conta");
     router.navigate({ to: "/auth", replace: true });
   }
 
@@ -55,17 +55,17 @@ function AuthedLayout() {
     return (
       <div className="min-h-screen bg-blob grid place-items-center px-4">
         <div className="card-soft p-8 max-w-md text-center">
-          <h1 className="font-display text-2xl font-bold">Admin access required</h1>
+          <h1 className="font-display text-2xl font-bold">Acesso de administrador necessário</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your account ({user.email}) is signed in but is not an admin. Ask an existing admin
-            to grant you the role.
+            Sua conta ({user.email}) está conectada, mas não é administradora. Peça a um admin
+            existente para conceder essa permissão.
           </p>
           <div className="mt-6 flex gap-2 justify-center">
             <Button asChild variant="secondary" className="rounded-full">
-              <Link to="/">Home</Link>
+              <Link to="/">Início</Link>
             </Button>
             <Button onClick={signOut} className="rounded-full gap-1.5">
-              <LogOut className="size-4" /> Sign out
+              <LogOut className="size-4" /> Sair
             </Button>
           </div>
         </div>
