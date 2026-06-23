@@ -281,7 +281,7 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
 
 function Welcome({
   event, onStart, onUpload,
-}: { event: EventRow; onStart: () => void; onUpload: () => void }) {
+}: { event: EventRow; onStart: () => void; onUpload: (src: UploadSource) => void }) {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-20 text-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
@@ -302,21 +302,28 @@ function Welcome({
           Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
         </p>
       )}
-      <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <div className="mt-10 flex flex-col items-center justify-center gap-3">
         <button
           onClick={onStart}
           className="inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.42_0.075_188/0.55)] transition active:scale-95 hover:opacity-95"
         >
           <Camera className="size-6 sm:size-7" />
-          Tirar Fotos
+          Tirar Fotos (com cabine)
         </button>
-        <button
-          onClick={onUpload}
-          className="inline-flex items-center gap-3 rounded-full bg-secondary px-8 py-4 sm:px-10 sm:py-5 text-lg sm:text-xl font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
-        >
-          <Upload className="size-5 sm:size-6" />
-          Enviar Foto
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
+          <button
+            onClick={() => onUpload("camera")}
+            className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
+          >
+            <Camera className="size-4" /> Câmera do celular
+          </button>
+          <button
+            onClick={() => onUpload("gallery")}
+            className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
+          >
+            <Upload className="size-4" /> Galeria / Dispositivo
+          </button>
+        </div>
       </div>
       <AlbumGrid event={event} />
     </div>
