@@ -649,6 +649,7 @@ function EditEventDialog({
   const [overlayType, setOverlayType] = useState<OverlayType>("frame");
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
   const [logoSize, setLogoSize] = useState<number>(25);
+  const [requireCode, setRequireCode] = useState<boolean>(true);
   const [frame, setFrame] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
@@ -667,6 +668,7 @@ function EditEventDialog({
     setOverlayType(event.overlay_type ?? "frame");
     setLogoPosition(event.logo_position ?? "bottom");
     setLogoSize(event.logo_size ?? 25);
+    setRequireCode(event.requires_code ?? true);
     setFrame(null);
     setLogo(null);
     setBg(null);
@@ -718,7 +720,14 @@ function EditEventDialog({
         overlay_type: overlayType,
         logo_position: logoPosition,
         logo_size: logoSize,
+        requires_code: requireCode,
       };
+      if (requireCode && !event.access_code) {
+        patch.access_code = generateAccessCode();
+      } else if (!requireCode) {
+        patch.access_code = null;
+        patch.access_code_hash = null;
+      }
       if (frame) {
         patch.frame_url = await uploadAndSign("event-frames", `${event.slug}/${Date.now()}-${frame.name}`, frame, frame.type);
       }
@@ -751,7 +760,7 @@ function EditEventDialog({
           <EventFormFields
             values={{
               name, date, photoCount, description, printLayout,
-              overlayType, logoPosition, logoSize,
+              overlayType, logoPosition, logoSize, requireCode,
               frame, logo, bg, framePreview, logoPreview, bgPreview,
               existingFrameUrl: event?.frame_url ?? null,
               existingLogoUrl: event?.logo_url ?? null,
@@ -766,6 +775,7 @@ function EditEventDialog({
               if (p.overlayType !== undefined) setOverlayType(p.overlayType);
               if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
               if (p.logoSize !== undefined) setLogoSize(p.logoSize);
+              if (p.requireCode !== undefined) setRequireCode(p.requireCode);
               if (p.frame !== undefined) setFrame(p.frame);
               if (p.logo !== undefined) setLogo(p.logo);
               if (p.bg !== undefined) setBg(p.bg);
