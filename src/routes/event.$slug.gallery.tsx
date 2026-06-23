@@ -51,22 +51,6 @@ export const Route = createFileRoute("/event/$slug/gallery")({
   ),
 });
 
-async function downloadPhoto(url: string, filename: string) {
-  try {
-    const r = await fetch(url);
-    const blob = await r.blob();
-    const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
-  } catch (e) {
-    toast.error((e as Error).message);
-  }
-}
 
 const PAGE_SIZE = 24;
 
@@ -183,22 +167,12 @@ function PublicGallery() {
         )}
       </main>
 
-      <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent className="sm:max-w-2xl p-3">
-          {open && (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={open.photo_url} alt="" className="w-full h-auto rounded-lg" />
-              <Button
-                onClick={() => downloadPhoto(open.photo_url, `${event.slug}-${open.id}.jpg`)}
-                className="rounded-full gap-2 w-full"
-              >
-                <Download className="size-4" /> Download
-              </Button>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <PhotoViewer
+        url={open?.photo_url ?? null}
+        filename={`${event.slug}-${open?.id ?? ""}.jpg`}
+        open={!!open}
+        onOpenChange={(o) => !o && setOpen(null)}
+      />
     </div>
   );
 }
