@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
 
 type PrintLayout = "portrait" | "landscape" | "a4";
+type OverlayType = "frame" | "logo";
+type LogoPosition = "top" | "bottom" | "left" | "right";
 
 type EventRow = {
   id: string;
@@ -26,6 +28,10 @@ type EventRow = {
   description: string | null;
   print_layout: PrintLayout;
   photo_count: number;
+  overlay_type: OverlayType;
+  logo_url: string | null;
+  logo_position: LogoPosition;
+  logo_size: number;
 };
 
 export const Route = createFileRoute("/event/$slug")({
@@ -33,7 +39,7 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count")
+      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
@@ -65,12 +71,14 @@ export const Route = createFileRoute("/event/$slug")({
 });
 
 type Phase = "welcome" | "capture" | "upload" | "composing" | "done";
+type UploadSource = "camera" | "gallery";
 
 const ACCESS_KEY_PREFIX = "xis:access:";
 
 function BoothPage() {
   const { event } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
+  const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
   const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -142,7 +150,7 @@ function BoothPage() {
         <Welcome
           event={event}
           onStart={() => setPhase("capture")}
-          onUpload={() => setPhase("upload")}
+          onUpload={(src) => { setUploadSource(src); setPhase("upload"); }}
         />
       )}
       {phase === "capture" && (
@@ -156,6 +164,7 @@ function BoothPage() {
       {phase === "upload" && (
         <UploadFlow
           event={event}
+          source={uploadSource}
           onDone={(photo) => { setFinalPhoto(photo); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
@@ -272,7 +281,7 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
 
 function Welcome({
   event, onStart, onUpload,
-}: { event: EventRow; onStart: () => void; onUpload: () => void }) {
+}: { event: EventRow; onStart: () => void; onUpload: (src: UploadSource) => void }) {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-20 text-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
@@ -293,21 +302,28 @@ function Welcome({
           Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
         </p>
       )}
-      <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <div className="mt-10 flex flex-col items-center justify-center gap-3">
         <button
           onClick={onStart}
           className="inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.42_0.075_188/0.55)] transition active:scale-95 hover:opacity-95"
         >
           <Camera className="size-6 sm:size-7" />
-          Tirar Fotos
+          Tirar Fotos (com cabine)
         </button>
-        <button
-          onClick={onUpload}
-          className="inline-flex items-center gap-3 rounded-full bg-secondary px-8 py-4 sm:px-10 sm:py-5 text-lg sm:text-xl font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
-        >
-          <Upload className="size-5 sm:size-6" />
-          Enviar Foto
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
+          <button
+            onClick={() => onUpload("camera")}
+            className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
+          >
+            <Camera className="size-4" /> Câmera do celular
+          </button>
+          <button
+            onClick={() => onUpload("gallery")}
+            className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
+          >
+            <Upload className="size-4" /> Galeria / Dispositivo
+          </button>
+        </div>
       </div>
       <AlbumGrid event={event} />
     </div>
@@ -473,7 +489,7 @@ async function finalizeAndUpload(
   event: EventRow,
   count: number,
 ): Promise<{ id: string; url: string }> {
-  const blob = await composeStrip(shots, event.frame_url, count, event.print_layout ?? "portrait");
+  const blob = await composeStrip(shots, event, count);
   const path = `${event.slug}/${Date.now()}.jpg`;
   const url = await uploadAndSign("event-photos", path, blob, "image/jpeg");
   const { data, error } = await supabase
@@ -683,9 +699,10 @@ function CaptureFlow({
 }
 
 function UploadFlow({
-  event, onDone, onCancel, onComposing,
+  event, source, onDone, onCancel, onComposing,
 }: {
   event: EventRow;
+  source: UploadSource;
   onDone: (photo: { id: string; url: string }) => void;
   onCancel: () => void;
   onComposing: () => void;
@@ -760,7 +777,7 @@ function UploadFlow({
         type="file"
         accept="image/*"
         multiple={event.photo_count > 1}
-        capture="environment"
+        {...(source === "camera" ? { capture: "environment" as const } : {})}
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
@@ -818,30 +835,27 @@ function UploadFlow({
   );
 }
 
-// Compose photo strip with frame overlay; layout adapts to print format.
+// Compose photo strip with frame or logo overlay; layout adapts to print format.
 async function composeStrip(
   shots: string[],
-  frameUrl: string | null,
+  event: EventRow,
   count: number,
-  layout: PrintLayout = "portrait",
 ): Promise<Blob> {
+  const layout: PrintLayout = event.print_layout ?? "portrait";
   const cellW = 600, cellH = 800, gap = 24, pad = 36;
 
   let cols = 1, rows = 1;
   if (layout === "landscape") {
-    // Swap so the composition is wider than tall.
     if (count === 1) { cols = 1; rows = 1; }
     else if (count === 2) { cols = 2; rows = 1; }
     else if (count === 3) { cols = 3; rows = 1; }
     else { cols = 2; rows = 2; }
   } else if (layout === "a4") {
-    // A4 portrait — give photos more room across.
     if (count === 1) { cols = 1; rows = 1; }
     else if (count === 2) { cols = 1; rows = 2; }
     else if (count === 3) { cols = 1; rows = 3; }
     else { cols = 2; rows = 2; }
   } else {
-    // 10x15 portrait
     if (count === 1) { cols = 1; rows = 1; }
     else if (count === 2) { cols = 1; rows = 2; }
     else if (count === 3) { cols = 1; rows = 3; }
@@ -882,12 +896,39 @@ async function composeStrip(
     ctx.restore();
   });
 
-  if (frameUrl) {
+  const overlayType = event.overlay_type ?? "frame";
+
+  if (overlayType === "frame" && event.frame_url) {
     try {
-      const frame = await loadImage(frameUrl, true);
+      const frame = await loadImage(event.frame_url, true);
       ctx.drawImage(frame, 0, 0, W, H);
     } catch (e) {
       console.warn("Frame failed to load", e);
+    }
+  } else if (overlayType === "logo" && event.logo_url) {
+    try {
+      const logo = await loadImage(event.logo_url, true);
+      const sizePct = Math.max(5, Math.min(80, event.logo_size ?? 25)) / 100;
+      const position: LogoPosition = event.logo_position ?? "bottom";
+      const horizontal = position === "top" || position === "bottom";
+      const targetW = horizontal ? W * sizePct * (logo.width / logo.height) : W * sizePct;
+      const targetH = horizontal ? H * sizePct : H * sizePct * (logo.height / logo.width);
+      // Constrain so logo never exceeds canvas
+      const maxW = W - pad * 2;
+      const maxH = H - pad * 2;
+      const scale = Math.min(1, maxW / targetW, maxH / targetH);
+      const finalW = targetW * scale;
+      const finalH = targetH * scale;
+      const margin = 24;
+      let x = (W - finalW) / 2;
+      let y = (H - finalH) / 2;
+      if (position === "top") y = margin;
+      else if (position === "bottom") y = H - finalH - margin;
+      else if (position === "left") x = margin;
+      else if (position === "right") x = W - finalW - margin;
+      ctx.drawImage(logo, x, y, finalW, finalH);
+    } catch (e) {
+      console.warn("Logo failed to load", e);
     }
   }
 
@@ -895,6 +936,7 @@ async function composeStrip(
     canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Compose failed")), "image/jpeg", 0.92),
   );
 }
+
 
 function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
   const ir = img.width / img.height, tr = w / h;

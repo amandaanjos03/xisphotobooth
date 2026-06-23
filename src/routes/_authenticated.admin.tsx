@@ -14,13 +14,15 @@ import {
 } from "@/components/ui/dialog";
 import {
   Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
-  ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer,
+  ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import xisLogo from "@/assets/xis-logo.png.asset.json";
 
 type PrintLayout = "portrait" | "landscape" | "a4";
+type OverlayType = "frame" | "logo";
+type LogoPosition = "top" | "bottom" | "left" | "right";
 
 type EventRow = {
   id: string;
@@ -36,6 +38,10 @@ type EventRow = {
   owner_id: string | null;
   access_code: string | null;
   access_code_hash: string | null;
+  overlay_type: OverlayType;
+  logo_url: string | null;
+  logo_position: LogoPosition;
+  logo_size: number;
 };
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
@@ -275,11 +281,17 @@ function EventFormFields({
     photoCount: 1 | 2 | 3 | 4;
     description: string;
     printLayout: PrintLayout;
+    overlayType: OverlayType;
+    logoPosition: LogoPosition;
+    logoSize: number;
     frame: File | null;
+    logo: File | null;
     bg: File | null;
     framePreview: string | null;
+    logoPreview: string | null;
     bgPreview: string | null;
     existingFrameUrl?: string | null;
+    existingLogoUrl?: string | null;
     existingBgUrl?: string | null;
   };
   onChange: (patch: Partial<typeof values>) => void;
@@ -338,21 +350,98 @@ function EventFormFields({
         </select>
         <p className="text-xs text-muted-foreground">Define o tamanho da composição final e da página de impressão.</p>
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="frame">Moldura (PNG transparente)</Label>
-        <Input
-          id="frame"
-          type="file"
-          accept="image/png,image/webp"
-          onChange={(e) => onChange({ frame: e.target.files?.[0] ?? null })}
-        />
-        {(values.framePreview || values.existingFrameUrl) && (
-          <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={values.framePreview ?? values.existingFrameUrl ?? ""} alt="Moldura" className="size-full object-contain" />
-          </div>
-        )}
+        <Label>Sobreposição nas fotos</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {(["frame", "logo"] as OverlayType[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => onChange({ overlayType: t })}
+              className={`h-11 rounded-lg border text-sm font-semibold transition ${
+                values.overlayType === t
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-input bg-background hover:bg-accent"
+              }`}
+            >
+              {t === "frame" ? "Moldura completa" : "Logo"}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {values.overlayType === "frame" ? (
+        <div className="space-y-2">
+          <Label htmlFor="frame">Moldura (PNG transparente)</Label>
+          <Input
+            id="frame"
+            type="file"
+            accept="image/png,image/webp"
+            onChange={(e) => onChange({ frame: e.target.files?.[0] ?? null })}
+          />
+          {(values.framePreview || values.existingFrameUrl) && (
+            <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={values.framePreview ?? values.existingFrameUrl ?? ""} alt="Moldura" className="size-full object-contain" />
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="logo">Logo (PNG transparente recomendado)</Label>
+            <Input
+              id="logo"
+              type="file"
+              accept="image/png,image/webp,image/jpeg"
+              onChange={(e) => onChange({ logo: e.target.files?.[0] ?? null })}
+            />
+            {(values.logoPreview || values.existingLogoUrl) && (
+              <div className="mt-2 h-32 rounded-lg border border-border overflow-hidden grid place-items-center bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={values.logoPreview ?? values.existingLogoUrl ?? ""} alt="Logo" className="max-h-full max-w-full object-contain" />
+              </div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Posição do logo</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {(["top", "bottom", "left", "right"] as LogoPosition[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => onChange({ logoPosition: p })}
+                  className={`h-10 rounded-lg border text-xs font-semibold transition ${
+                    values.logoPosition === p
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-background hover:bg-accent"
+                  }`}
+                >
+                  {p === "top" ? "Topo" : p === "bottom" ? "Base" : p === "left" ? "Esquerda" : "Direita"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="logoSize">Tamanho do logo ({values.logoSize}%)</Label>
+            <input
+              id="logoSize"
+              type="range"
+              min={5}
+              max={60}
+              step={1}
+              value={values.logoSize}
+              onChange={(e) => onChange({ logoSize: Number(e.target.value) })}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Percentual em relação à {values.logoPosition === "left" || values.logoPosition === "right" ? "altura" : "largura"} da composição.
+            </p>
+          </div>
+        </>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="bg">Imagem de fundo do convidado (opcional)</Label>
         <Input
@@ -382,9 +471,14 @@ function CreateEventDialog({
   const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
   const [description, setDescription] = useState("");
   const [printLayout, setPrintLayout] = useState<PrintLayout>("portrait");
+  const [overlayType, setOverlayType] = useState<OverlayType>("frame");
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
+  const [logoSize, setLogoSize] = useState<number>(25);
   const [frame, setFrame] = useState<File | null>(null);
+  const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
   const [framePreview, setFramePreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -394,6 +488,13 @@ function CreateEventDialog({
     setFramePreview(url);
     return () => URL.revokeObjectURL(url);
   }, [frame]);
+
+  useEffect(() => {
+    if (!logo) { setLogoPreview(null); return; }
+    const url = URL.createObjectURL(logo);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logo]);
 
   useEffect(() => {
     if (!bg) { setBgPreview(null); return; }
@@ -411,8 +512,12 @@ function CreateEventDialog({
       const code = generateAccessCode();
 
       let frame_url: string | null = null;
-      if (frame) {
+      if (overlayType === "frame" && frame) {
         frame_url = await uploadAndSign("event-frames", `${slug}/${Date.now()}-${frame.name}`, frame, frame.type);
+      }
+      let logo_url: string | null = null;
+      if (overlayType === "logo" && logo) {
+        logo_url = await uploadAndSign("event-frames", `${slug}/logo-${Date.now()}-${logo.name}`, logo, logo.type);
       }
       let bg_url: string | null = null;
       if (bg) {
@@ -423,6 +528,10 @@ function CreateEventDialog({
         slug,
         date: date || null,
         frame_url,
+        logo_url,
+        overlay_type: overlayType,
+        logo_position: logoPosition,
+        logo_size: logoSize,
         bg_url,
         description: description.trim() || null,
         print_layout: printLayout,
@@ -459,7 +568,8 @@ function CreateEventDialog({
         <EventFormFields
           values={{
             name, date, photoCount, description, printLayout,
-            frame, bg, framePreview, bgPreview,
+            overlayType, logoPosition, logoSize,
+            frame, logo, bg, framePreview, logoPreview, bgPreview,
           }}
           onChange={(p) => {
             if (p.name !== undefined) setName(p.name);
@@ -467,7 +577,11 @@ function CreateEventDialog({
             if (p.photoCount !== undefined) setPhotoCount(p.photoCount);
             if (p.description !== undefined) setDescription(p.description);
             if (p.printLayout !== undefined) setPrintLayout(p.printLayout);
+            if (p.overlayType !== undefined) setOverlayType(p.overlayType);
+            if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
+            if (p.logoSize !== undefined) setLogoSize(p.logoSize);
             if (p.frame !== undefined) setFrame(p.frame);
+            if (p.logo !== undefined) setLogo(p.logo);
             if (p.bg !== undefined) setBg(p.bg);
           }}
         />
@@ -485,14 +599,20 @@ function CreateEventDialog({
 function EditEventDialog({
   event, onClose, onSaved,
 }: { event: EventRow | null; onClose: () => void; onSaved: () => void }) {
+
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
   const [description, setDescription] = useState("");
   const [printLayout, setPrintLayout] = useState<PrintLayout>("portrait");
+  const [overlayType, setOverlayType] = useState<OverlayType>("frame");
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
+  const [logoSize, setLogoSize] = useState<number>(25);
   const [frame, setFrame] = useState<File | null>(null);
+  const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
   const [framePreview, setFramePreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -503,7 +623,11 @@ function EditEventDialog({
     setPhotoCount((event.photo_count as 1 | 2 | 3 | 4) || 4);
     setDescription(event.description ?? "");
     setPrintLayout(event.print_layout ?? "portrait");
+    setOverlayType(event.overlay_type ?? "frame");
+    setLogoPosition(event.logo_position ?? "bottom");
+    setLogoSize(event.logo_size ?? 25);
     setFrame(null);
+    setLogo(null);
     setBg(null);
   }, [event]);
 
@@ -515,11 +639,28 @@ function EditEventDialog({
   }, [frame]);
 
   useEffect(() => {
+    if (!logo) { setLogoPreview(null); return; }
+    const url = URL.createObjectURL(logo);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logo]);
+
+  useEffect(() => {
     if (!bg) { setBgPreview(null); return; }
     const url = URL.createObjectURL(bg);
     setBgPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [bg]);
+
+  async function regenerateCode() {
+    if (!event) return;
+    if (!confirm("Gerar uma nova senha para este evento? A anterior deixará de funcionar.")) return;
+    const newCode = generateAccessCode();
+    const { error } = await supabase.from("events").update({ access_code: newCode } as never).eq("id", event.id);
+    if (error) return toast.error(error.message);
+    toast.success(`Nova senha: ${newCode}`);
+    onSaved();
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -533,9 +674,15 @@ function EditEventDialog({
         photo_count: photoCount,
         description: description.trim() || null,
         print_layout: printLayout,
+        overlay_type: overlayType,
+        logo_position: logoPosition,
+        logo_size: logoSize,
       };
       if (frame) {
         patch.frame_url = await uploadAndSign("event-frames", `${event.slug}/${Date.now()}-${frame.name}`, frame, frame.type);
+      }
+      if (logo) {
+        patch.logo_url = await uploadAndSign("event-frames", `${event.slug}/logo-${Date.now()}-${logo.name}`, logo, logo.type);
       }
       if (bg) {
         patch.bg_url = await uploadAndSign("event-frames", `${event.slug}/bg-${Date.now()}-${bg.name}`, bg, bg.type);
@@ -563,8 +710,10 @@ function EditEventDialog({
           <EventFormFields
             values={{
               name, date, photoCount, description, printLayout,
-              frame, bg, framePreview, bgPreview,
+              overlayType, logoPosition, logoSize,
+              frame, logo, bg, framePreview, logoPreview, bgPreview,
               existingFrameUrl: event?.frame_url ?? null,
+              existingLogoUrl: event?.logo_url ?? null,
               existingBgUrl: event?.bg_url ?? null,
             }}
             onChange={(p) => {
@@ -573,10 +722,26 @@ function EditEventDialog({
               if (p.photoCount !== undefined) setPhotoCount(p.photoCount);
               if (p.description !== undefined) setDescription(p.description);
               if (p.printLayout !== undefined) setPrintLayout(p.printLayout);
+              if (p.overlayType !== undefined) setOverlayType(p.overlayType);
+              if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
+              if (p.logoSize !== undefined) setLogoSize(p.logoSize);
               if (p.frame !== undefined) setFrame(p.frame);
+              if (p.logo !== undefined) setLogo(p.logo);
               if (p.bg !== undefined) setBg(p.bg);
             }}
           />
+          {event?.access_code && (
+            <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center gap-3">
+              <KeyRound className="size-4 text-primary" />
+              <div className="flex-1">
+                <div className="text-xs text-muted-foreground">Senha atual</div>
+                <div className="font-display font-bold tracking-[0.3em] text-primary">{event.access_code}</div>
+              </div>
+              <Button type="button" size="sm" variant="secondary" className="rounded-full gap-1.5" onClick={regenerateCode}>
+                <RefreshCw className="size-3.5" /> Gerar nova
+              </Button>
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={busy} className="rounded-full gap-2">
@@ -669,6 +834,25 @@ function ShareDialog({
               {copied ? "Copiado" : codeToShow ? "Copiar tudo" : "Copiar link"}
             </Button>
           </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="w-full rounded-full gap-2"
+            disabled={!qr}
+            onClick={() => {
+              if (!qr) return;
+              const a = document.createElement("a");
+              a.href = qr;
+              a.download = `qr-${event?.slug ?? "evento"}.png`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            }}
+          >
+            <Download className="size-4" /> Baixar QR Code
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
