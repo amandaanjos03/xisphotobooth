@@ -32,6 +32,7 @@ export type Database = {
           owner_id: string | null
           photo_count: number
           print_layout: string
+          requires_code: boolean
           slug: string
         }
         Insert: {
@@ -51,6 +52,7 @@ export type Database = {
           owner_id?: string | null
           photo_count?: number
           print_layout?: string
+          requires_code?: boolean
           slug: string
         }
         Update: {
@@ -70,6 +72,7 @@ export type Database = {
           owner_id?: string | null
           photo_count?: number
           print_layout?: string
+          requires_code?: boolean
           slug?: string
         }
         Relationships: []
