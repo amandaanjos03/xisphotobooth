@@ -471,9 +471,14 @@ function CreateEventDialog({
   const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
   const [description, setDescription] = useState("");
   const [printLayout, setPrintLayout] = useState<PrintLayout>("portrait");
+  const [overlayType, setOverlayType] = useState<OverlayType>("frame");
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
+  const [logoSize, setLogoSize] = useState<number>(25);
   const [frame, setFrame] = useState<File | null>(null);
+  const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
   const [framePreview, setFramePreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -483,6 +488,13 @@ function CreateEventDialog({
     setFramePreview(url);
     return () => URL.revokeObjectURL(url);
   }, [frame]);
+
+  useEffect(() => {
+    if (!logo) { setLogoPreview(null); return; }
+    const url = URL.createObjectURL(logo);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logo]);
 
   useEffect(() => {
     if (!bg) { setBgPreview(null); return; }
@@ -500,8 +512,12 @@ function CreateEventDialog({
       const code = generateAccessCode();
 
       let frame_url: string | null = null;
-      if (frame) {
+      if (overlayType === "frame" && frame) {
         frame_url = await uploadAndSign("event-frames", `${slug}/${Date.now()}-${frame.name}`, frame, frame.type);
+      }
+      let logo_url: string | null = null;
+      if (overlayType === "logo" && logo) {
+        logo_url = await uploadAndSign("event-frames", `${slug}/logo-${Date.now()}-${logo.name}`, logo, logo.type);
       }
       let bg_url: string | null = null;
       if (bg) {
@@ -512,6 +528,10 @@ function CreateEventDialog({
         slug,
         date: date || null,
         frame_url,
+        logo_url,
+        overlay_type: overlayType,
+        logo_position: logoPosition,
+        logo_size: logoSize,
         bg_url,
         description: description.trim() || null,
         print_layout: printLayout,
@@ -548,7 +568,8 @@ function CreateEventDialog({
         <EventFormFields
           values={{
             name, date, photoCount, description, printLayout,
-            frame, bg, framePreview, bgPreview,
+            overlayType, logoPosition, logoSize,
+            frame, logo, bg, framePreview, logoPreview, bgPreview,
           }}
           onChange={(p) => {
             if (p.name !== undefined) setName(p.name);
@@ -556,7 +577,11 @@ function CreateEventDialog({
             if (p.photoCount !== undefined) setPhotoCount(p.photoCount);
             if (p.description !== undefined) setDescription(p.description);
             if (p.printLayout !== undefined) setPrintLayout(p.printLayout);
+            if (p.overlayType !== undefined) setOverlayType(p.overlayType);
+            if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
+            if (p.logoSize !== undefined) setLogoSize(p.logoSize);
             if (p.frame !== undefined) setFrame(p.frame);
+            if (p.logo !== undefined) setLogo(p.logo);
             if (p.bg !== undefined) setBg(p.bg);
           }}
         />
