@@ -21,6 +21,7 @@ type EventRow = {
   slug: string;
   date: string | null;
   frame_url: string | null;
+  photo_count: number;
   created_at: string;
 };
 
@@ -197,6 +198,7 @@ function CreateEventDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
+  const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
   const [frame, setFrame] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -223,6 +225,7 @@ function CreateEventDialog({ onClose }: { onClose: () => void }) {
         slug,
         date: date || null,
         frame_url,
+        photo_count: photoCount,
       });
       if (error) throw error;
       toast.success("Event created");
@@ -251,6 +254,26 @@ function CreateEventDialog({ onClose }: { onClose: () => void }) {
         <div className="space-y-2">
           <Label htmlFor="date">Event date</Label>
           <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Fotos por moldura</Label>
+          <div className="grid grid-cols-4 gap-2">
+            {[1, 2, 3, 4].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPhotoCount(n as 1 | 2 | 3 | 4)}
+                className={`h-12 rounded-lg border text-base font-semibold transition ${
+                  photoCount === n
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input bg-background hover:bg-accent"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">Quantas fotos serão capturadas e montadas na moldura.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="frame">Frame overlay (transparent PNG)</Label>
