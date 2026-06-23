@@ -392,36 +392,43 @@ function CaptureFlow({
   );
 }
 
-// Compose 2x2 strip with frame overlay
-async function composeStrip(shots: string[], frameUrl: string | null): Promise<Blob> {
+// Compose photo strip with frame overlay; supports 1, 2, 3 or 4 photos
+async function composeStrip(shots: string[], frameUrl: string | null, count: number): Promise<Blob> {
   const cellW = 600, cellH = 800, gap = 24, pad = 36;
-  const W = cellW * 2 + gap + pad * 2;
-  const H = cellH * 2 + gap + pad * 2;
+
+  // Layouts: cols x rows
+  let cols = 1, rows = 1;
+  if (count === 1) { cols = 1; rows = 1; }
+  else if (count === 2) { cols = 1; rows = 2; }
+  else if (count === 3) { cols = 1; rows = 3; }
+  else { cols = 2; rows = 2; }
+
+  const W = cellW * cols + gap * (cols - 1) + pad * 2;
+  const H = cellH * rows + gap * (rows - 1) + pad * 2;
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
 
-  // background
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, "#fff7ee");
   grad.addColorStop(1, "#ffe3cf");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  const positions = [
-    [pad, pad],
-    [pad + cellW + gap, pad],
-    [pad, pad + cellH + gap],
-    [pad + cellW + gap, pad + cellH + gap],
-  ];
-  const imgs = await Promise.all(shots.map((s) => loadImage(s)));
+  const positions: [number, number][] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      positions.push([pad + c * (cellW + gap), pad + r * (cellH + gap)]);
+    }
+  }
+
+  const imgs = await Promise.all(shots.slice(0, count).map((s) => loadImage(s)));
   imgs.forEach((img, i) => {
     const [x, y] = positions[i];
-    // white frame
     ctx.fillStyle = "#fff";
     ctx.fillRect(x - 6, y - 6, cellW + 12, cellH + 12);
-    // cover draw
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, cellW, cellH);
