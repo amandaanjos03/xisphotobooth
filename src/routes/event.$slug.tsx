@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadAndSign } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
@@ -116,7 +117,40 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
         <Camera className="size-6 sm:size-7" />
         Tirar Fotos
       </button>
-      <div className="mt-6">
+      <RecentPhotos event={event} />
+    </div>
+  );
+}
+
+function RecentPhotos({ event }: { event: EventRow }) {
+  const q = useQuery({
+    queryKey: ["photos", event.id, "recent"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("photos")
+        .select("id, photo_url")
+        .eq("event_id", event.id)
+        .eq("hidden", false)
+        .order("created_at", { ascending: false })
+        .limit(6);
+      if (error) throw error;
+      return data as { id: string; photo_url: string }[];
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  if (q.isLoading) {
+    return (
+      <div className="mt-12 grid place-items-center text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+      </div>
+    );
+  }
+
+  const photos = q.data ?? [];
+  if (photos.length === 0) {
+    return (
+      <div className="mt-10">
         <Link
           to="/event/$slug/gallery"
           params={{ slug: event.slug }}
@@ -124,6 +158,42 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
         >
           <Images className="size-4" /> Ver galeria do evento
         </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-14 text-left">
+      <div className="flex items-end justify-between mb-4">
+        <div>
+          <h2 className="font-display text-2xl sm:text-3xl font-bold">Últimas fotos</h2>
+          <p className="text-sm text-muted-foreground">As 6 mais recentes deste evento</p>
+        </div>
+        <Link
+          to="/event/$slug/gallery"
+          params={{ slug: event.slug }}
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-2 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-background transition"
+        >
+          <Images className="size-4" /> Ver todas
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {photos.map((p) => (
+          <Link
+            key={p.id}
+            to="/event/$slug/gallery"
+            params={{ slug: event.slug }}
+            className="group relative aspect-square overflow-hidden rounded-xl bg-muted card-soft transition active:scale-95"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={p.photo_url}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 size-full object-cover transition-transform group-hover:scale-105"
+            />
+          </Link>
+        ))}
       </div>
     </div>
   );

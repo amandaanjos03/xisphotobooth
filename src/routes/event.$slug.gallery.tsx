@@ -68,25 +68,33 @@ async function downloadPhoto(url: string, filename: string) {
   }
 }
 
+const PAGE_SIZE = 24;
+
 function PublicGallery() {
   const { event } = Route.useLoaderData();
   const [open, setOpen] = useState<PhotoRow | null>(null);
+  const [page, setPage] = useState(0);
 
   const photosQ = useQuery({
-    queryKey: ["photos", event.id, "public"],
+    queryKey: ["photos", event.id, "public", page],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error, count } = await supabase
         .from("photos")
-        .select("id, photo_url, created_at")
+        .select("id, photo_url, created_at", { count: "exact" })
         .eq("event_id", event.id)
         .eq("hidden", false)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data as PhotoRow[];
+      return { rows: (data ?? []) as PhotoRow[], count: count ?? 0 };
     },
   });
 
-  const photos = photosQ.data ?? [];
+  const photos = photosQ.data?.rows ?? [];
+  const total = photosQ.data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="min-h-screen bg-blob">
@@ -107,7 +115,7 @@ function PublicGallery() {
         <div className="mb-8 text-center">
           <h1 className="font-display text-4xl sm:text-5xl font-bold">{event.name}</h1>
           <p className="mt-2 text-muted-foreground">
-            {photos.length} memor{photos.length === 1 ? "y" : "ies"} from this event
+            {total} memor{total === 1 ? "y" : "ies"} from this event
           </p>
           <Button asChild className="mt-6 rounded-full gap-2">
             <Link to="/event/$slug" params={{ slug: event.slug }}>
@@ -149,6 +157,30 @@ function PublicGallery() {
             </button>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <Button
+              variant="secondary"
+              className="rounded-full"
+              disabled={page === 0 || photosQ.isFetching}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground tabular-nums">
+              Página {page + 1} de {totalPages}
+            </span>
+            <Button
+              variant="secondary"
+              className="rounded-full"
+              disabled={page >= totalPages - 1 || photosQ.isFetching}
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            >
+              Próxima
+            </Button>
+          </div>
+        )}
       </main>
 
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
