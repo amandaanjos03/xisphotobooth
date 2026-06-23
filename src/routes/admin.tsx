@@ -157,9 +157,14 @@ function AdminDashboard() {
                     </span>
                   </div>
                 </div>
-                <div className="mt-auto flex items-center gap-2">
+                <div className="mt-auto flex items-center gap-2 flex-wrap">
                   <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setShareFor(ev)}>
                     <Share2 className="size-3.5" /> Share
+                  </Button>
+                  <Button asChild variant="secondary" size="sm" className="rounded-full gap-1.5">
+                    <Link to="/admin/event/$slug" params={{ slug: ev.slug }}>
+                      <Images className="size-3.5" /> Gallery
+                    </Link>
                   </Button>
                   <Button asChild variant="ghost" size="sm" className="rounded-full gap-1.5">
                     <Link to="/event/$slug" params={{ slug: ev.slug }}>
