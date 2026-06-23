@@ -511,6 +511,7 @@ function CreateEventDialog({
   const [overlayType, setOverlayType] = useState<OverlayType>("frame");
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
   const [logoSize, setLogoSize] = useState<number>(25);
+  const [requireCode, setRequireCode] = useState<boolean>(true);
   const [frame, setFrame] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
@@ -546,7 +547,7 @@ function CreateEventDialog({
     setBusy(true);
     try {
       const slug = uniqueSlug(name);
-      const code = generateAccessCode();
+      const code = requireCode ? generateAccessCode() : null;
 
       let frame_url: string | null = null;
       if (overlayType === "frame" && frame) {
@@ -575,6 +576,8 @@ function CreateEventDialog({
         photo_count: photoCount,
         owner_id: ownerId,
         access_code: code,
+        access_code_hash: null,
+        requires_code: requireCode,
       };
       const { data, error } = await supabase
         .from("events")
@@ -584,7 +587,7 @@ function CreateEventDialog({
       if (error) throw error;
       toast.success("Evento criado");
       qc.invalidateQueries({ queryKey: ["events", ownerId] });
-      onCreated(data as unknown as EventRow, code);
+      onCreated(data as unknown as EventRow, code ?? "");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -605,7 +608,7 @@ function CreateEventDialog({
         <EventFormFields
           values={{
             name, date, photoCount, description, printLayout,
-            overlayType, logoPosition, logoSize,
+            overlayType, logoPosition, logoSize, requireCode,
             frame, logo, bg, framePreview, logoPreview, bgPreview,
           }}
           onChange={(p) => {
@@ -617,6 +620,7 @@ function CreateEventDialog({
             if (p.overlayType !== undefined) setOverlayType(p.overlayType);
             if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
             if (p.logoSize !== undefined) setLogoSize(p.logoSize);
+            if (p.requireCode !== undefined) setRequireCode(p.requireCode);
             if (p.frame !== undefined) setFrame(p.frame);
             if (p.logo !== undefined) setLogo(p.logo);
             if (p.bg !== undefined) setBg(p.bg);
