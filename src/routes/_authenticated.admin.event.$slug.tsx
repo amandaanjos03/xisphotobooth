@@ -34,20 +34,20 @@ export const Route = createFileRoute("/_authenticated/admin/event/$slug")({
     return { event: data as EventRow };
   },
   head: ({ loaderData }) => ({
-    meta: [{ title: loaderData ? `${loaderData.event.name} — Gallery` : "Gallery" }],
+    meta: [{ title: loaderData ? `${loaderData.event.name} — Galeria` : "Galeria" }],
   }),
   notFoundComponent: () => (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="card-soft p-8 max-w-md text-center">
-        <h1 className="font-display text-3xl font-bold">Event not found</h1>
-        <Button asChild className="mt-6 rounded-full"><Link to="/admin">Go to dashboard</Link></Button>
+        <h1 className="font-display text-3xl font-bold">Evento não encontrado</h1>
+        <Button asChild className="mt-6 rounded-full"><Link to="/admin">Ir para o painel</Link></Button>
       </div>
     </div>
   ),
   errorComponent: ({ error }) => (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="card-soft p-8 max-w-md text-center">
-        <h1 className="font-display text-2xl font-bold">Something went wrong</h1>
+        <h1 className="font-display text-2xl font-bold">Ops, algo deu errado</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
       </div>
     </div>
@@ -102,7 +102,7 @@ function AdminEventGallery() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Photo deleted");
+      toast.success("Foto excluída");
       qc.invalidateQueries({ queryKey: ["photos", event.id, "admin"] });
       qc.invalidateQueries({ queryKey: ["photo-counts"] });
     },
@@ -123,7 +123,7 @@ function AdminEventGallery() {
       <header className="border-b border-border/60 backdrop-blur-sm bg-background/60 sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
           <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> Dashboard
+            <ArrowLeft className="size-4" /> Painel
           </Link>
           <Button
             size="sm"
@@ -141,7 +141,7 @@ function AdminEventGallery() {
         <div className="mb-8">
           <h1 className="font-display text-4xl sm:text-5xl font-bold">{event.name}</h1>
           <p className="mt-2 text-muted-foreground">
-            {photos.length} photo{photos.length === 1 ? "" : "s"} captured. Hidden photos won't appear in the public gallery.
+            {photos.length} {photos.length === 1 ? "foto capturada" : "fotos capturadas"}. Fotos ocultas não aparecem na galeria pública.
           </p>
         </div>
 
@@ -156,8 +156,8 @@ function AdminEventGallery() {
             <div className="mx-auto mb-4 size-14 rounded-2xl bg-accent grid place-items-center">
               <ImageIcon className="size-7 text-accent-foreground" />
             </div>
-            <h2 className="font-display text-2xl font-bold">No photos yet</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Photos taken at the booth will appear here.</p>
+            <h2 className="font-display text-2xl font-bold">Nenhuma foto ainda</h2>
+            <p className="mt-2 text-sm text-muted-foreground">As fotos tiradas na cabine aparecerão aqui.</p>
           </div>
         )}
 
@@ -189,7 +189,7 @@ function AdminEventGallery() {
                   size="icon"
                   variant="ghost"
                   className="rounded-full size-9"
-                  title={p.hidden ? "Show in public gallery" : "Hide from public gallery"}
+                  title={p.hidden ? "Mostrar na galeria pública" : "Ocultar da galeria pública"}
                   onClick={() => toggleHidden.mutate(p)}
                 >
                   {p.hidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
@@ -198,7 +198,7 @@ function AdminEventGallery() {
                   size="icon"
                   variant="ghost"
                   className="rounded-full size-9"
-                  title="Download"
+                  title="Baixar"
                   onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${i + 1}.jpg`)}
                 >
                   <Download className="size-4" />
@@ -207,9 +207,9 @@ function AdminEventGallery() {
                   size="icon"
                   variant="ghost"
                   className="rounded-full size-9 text-muted-foreground hover:text-destructive"
-                  title="Delete"
+                  title="Excluir"
                   onClick={() => {
-                    if (confirm("Delete this photo permanently?")) delPhoto.mutate(p);
+                    if (confirm("Excluir esta foto permanentemente?")) delPhoto.mutate(p);
                   }}
                 >
                   <Trash2 className="size-4" />

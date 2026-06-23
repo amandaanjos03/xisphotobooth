@@ -27,7 +27,7 @@ type EventRow = {
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminDashboard,
-  head: () => ({ meta: [{ title: "Dashboard — Snapbooth" }] }),
+  head: () => ({ meta: [{ title: "Painel — Xis Photo Booth" }] }),
 });
 
 function AdminDashboard() {
@@ -66,7 +66,7 @@ function AdminDashboard() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Event deleted");
+      toast.success("Evento excluído");
       qc.invalidateQueries({ queryKey: ["events"] });
       qc.invalidateQueries({ queryKey: ["photo-counts"] });
     },
@@ -82,15 +82,15 @@ function AdminDashboard() {
               <Camera className="size-5" />
             </div>
             <div>
-              <div className="font-display text-lg font-bold leading-none">Snapbooth</div>
-              <div className="text-xs text-muted-foreground">Admin Dashboard</div>
+              <div className="font-display text-lg font-bold leading-none">Xis Photo Booth</div>
+              <div className="text-xs text-muted-foreground">Painel do Administrador</div>
             </div>
           </div>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-full gap-2">
                 <Plus className="size-4" />
-                <span className="hidden sm:inline">New event</span>
+                <span className="hidden sm:inline">Novo evento</span>
               </Button>
             </DialogTrigger>
             <CreateEventDialog onClose={() => setCreateOpen(false)} />
@@ -100,9 +100,9 @@ function AdminDashboard() {
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-12">
         <div className="mb-8 sm:mb-12">
-          <h1 className="font-display text-4xl sm:text-5xl font-bold">Your events</h1>
+          <h1 className="font-display text-4xl sm:text-5xl font-bold">Seus eventos</h1>
           <p className="mt-2 text-muted-foreground">
-            Create an event, upload a frame, then share the link or QR code so guests can start snapping.
+            Crie um evento, envie uma moldura e compartilhe o link ou QR Code para os convidados começarem a tirar fotos.
           </p>
         </div>
 
@@ -117,10 +117,10 @@ function AdminDashboard() {
             <div className="mx-auto mb-4 size-14 rounded-2xl bg-accent grid place-items-center">
               <Camera className="size-7 text-accent-foreground" />
             </div>
-            <h2 className="font-display text-2xl font-bold">No events yet</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Create your first event to launch a photo booth.</p>
+            <h2 className="font-display text-2xl font-bold">Nenhum evento ainda</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Crie seu primeiro evento para abrir a cabine de fotos.</p>
             <Button onClick={() => setCreateOpen(true)} className="mt-6 rounded-full gap-2">
-              <Plus className="size-4" /> Create event
+              <Plus className="size-4" /> Criar evento
             </Button>
           </div>
         )}
@@ -133,8 +133,8 @@ function AdminDashboard() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={ev.frame_url}
-                    alt={`${ev.name} frame`}
-                    className="absolute inset-0 size-full object-contain p-3 bg-[conic-gradient(at_30%_30%,oklch(0.92_0.05_70),oklch(0.97_0.02_80))]"
+                    alt={`Moldura de ${ev.name}`}
+                    className="absolute inset-0 size-full object-contain p-3 bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]"
                   />
                 ) : (
                   <div className="absolute inset-0 grid place-items-center text-muted-foreground">
@@ -149,27 +149,27 @@ function AdminDashboard() {
                     {ev.date && (
                       <span className="inline-flex items-center gap-1">
                         <Calendar className="size-3.5" />
-                        {new Date(ev.date).toLocaleDateString()}
+                        {new Date(ev.date).toLocaleDateString("pt-BR")}
                       </span>
                     )}
                     <span className="inline-flex items-center gap-1">
                       <ImageIcon className="size-3.5" />
-                      {countsQ.data?.[ev.id] ?? 0} photos
+                      {countsQ.data?.[ev.id] ?? 0} fotos
                     </span>
                   </div>
                 </div>
                 <div className="mt-auto flex items-center gap-2 flex-wrap">
                   <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setShareFor(ev)}>
-                    <Share2 className="size-3.5" /> Share
+                    <Share2 className="size-3.5" /> Compartilhar
                   </Button>
                   <Button asChild variant="secondary" size="sm" className="rounded-full gap-1.5">
                     <Link to="/admin/event/$slug" params={{ slug: ev.slug }}>
-                      <Images className="size-3.5" /> Gallery
+                      <Images className="size-3.5" /> Galeria
                     </Link>
                   </Button>
                   <Button asChild variant="ghost" size="sm" className="rounded-full gap-1.5">
                     <Link to="/event/$slug" params={{ slug: ev.slug }}>
-                      <ExternalLink className="size-3.5" /> Open
+                      <ExternalLink className="size-3.5" /> Abrir
                     </Link>
                   </Button>
                   <Button
@@ -177,7 +177,7 @@ function AdminDashboard() {
                     size="sm"
                     className="ml-auto rounded-full text-muted-foreground hover:text-destructive"
                     onClick={() => {
-                      if (confirm(`Delete "${ev.name}"? This removes all its photos.`)) delMut.mutate(ev.id);
+                      if (confirm(`Excluir "${ev.name}"? Isso remove todas as fotos do evento.`)) delMut.mutate(ev.id);
                     }}
                   >
                     <Trash2 className="size-4" />
@@ -212,7 +212,7 @@ function CreateEventDialog({ onClose }: { onClose: () => void }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return toast.error("Event name is required");
+    if (!name.trim()) return toast.error("Informe o nome do evento");
     setBusy(true);
     try {
       const slug = uniqueSlug(name);
@@ -228,7 +228,7 @@ function CreateEventDialog({ onClose }: { onClose: () => void }) {
         photo_count: photoCount,
       });
       if (error) throw error;
-      toast.success("Event created");
+      toast.success("Evento criado");
       qc.invalidateQueries({ queryKey: ["events"] });
       onClose();
     } catch (err) {
@@ -241,18 +241,18 @@ function CreateEventDialog({ onClose }: { onClose: () => void }) {
   return (
     <DialogContent className="sm:max-w-lg">
       <DialogHeader>
-        <DialogTitle className="font-display text-2xl">Create new event</DialogTitle>
+        <DialogTitle className="font-display text-2xl">Criar novo evento</DialogTitle>
         <DialogDescription>
-          Set up the booth in seconds. You can upload a transparent PNG frame to overlay on photos.
+          Configure a cabine em segundos. Você pode enviar uma moldura PNG transparente para sobrepor às fotos.
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Event name</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Henrique's Birthday" required />
+          <Label htmlFor="name">Nome do evento</Label>
+          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Aniversário da Amanda" required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="date">Event date</Label>
+          <Label htmlFor="date">Data do evento</Label>
           <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="space-y-2">
@@ -276,7 +276,7 @@ function CreateEventDialog({ onClose }: { onClose: () => void }) {
           <p className="text-xs text-muted-foreground">Quantas fotos serão capturadas e montadas na moldura.</p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="frame">Frame overlay (transparent PNG)</Label>
+          <Label htmlFor="frame">Moldura (PNG transparente)</Label>
           <Input
             id="frame"
             type="file"
@@ -284,20 +284,20 @@ function CreateEventDialog({ onClose }: { onClose: () => void }) {
             onChange={(e) => setFrame(e.target.files?.[0] ?? null)}
           />
           {preview && (
-            <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.92_0.05_70),oklch(0.97_0.02_80))]">
+            <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={preview} alt="Frame preview" className="size-full object-contain" />
+              <img src={preview} alt="Pré-visualização da moldura" className="size-full object-contain" />
             </div>
           )}
           <p className="text-xs text-muted-foreground">
-            The frame is applied as an overlay across the full final photo strip.
+            A moldura é aplicada como sobreposição em toda a composição final das fotos.
           </p>
         </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={busy} className="rounded-full gap-2">
             {busy && <Loader2 className="size-4 animate-spin" />}
-            Create event
+            Criar evento
           </Button>
         </DialogFooter>
       </form>
@@ -314,7 +314,7 @@ function ShareDialog({ event, onClose }: { event: EventRow | null; onClose: () =
 
   useEffect(() => {
     if (!event || !url) return;
-    QRCode.toDataURL(url, { width: 512, margin: 1, color: { dark: "#2b1810", light: "#ffffff" } })
+    QRCode.toDataURL(url, { width: 512, margin: 1, color: { dark: "#0e524a", light: "#ffffff" } })
       .then(setQr)
       .catch(() => setQr(null));
   }, [event, url]);
@@ -323,10 +323,10 @@ function ShareDialog({ event, onClose }: { event: EventRow | null; onClose: () =
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success("Link copied to clipboard");
+      toast.success("Link copiado para a área de transferência");
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      toast.error("Couldn't copy link");
+      toast.error("Não foi possível copiar o link");
     }
   }
 
@@ -335,10 +335,10 @@ function ShareDialog({ event, onClose }: { event: EventRow | null; onClose: () =
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl flex items-center gap-2">
-            <QrCode className="size-5" /> Share booth
+            <QrCode className="size-5" /> Compartilhar cabine
           </DialogTitle>
           <DialogDescription>
-            Guests scan this code or open the link to launch the booth for{" "}
+            Os convidados escaneiam este código ou abrem o link para iniciar a cabine de{" "}
             <span className="font-semibold text-foreground">{event?.name}</span>.
           </DialogDescription>
         </DialogHeader>
@@ -346,7 +346,7 @@ function ShareDialog({ event, onClose }: { event: EventRow | null; onClose: () =
           <div className="rounded-2xl bg-white p-3 shadow-sm border border-border">
             {qr ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={qr} alt="QR code" className="size-56" />
+              <img src={qr} alt="QR Code" className="size-56" />
             ) : (
               <div className="size-56 grid place-items-center"><Loader2 className="animate-spin" /></div>
             )}
@@ -355,7 +355,7 @@ function ShareDialog({ event, onClose }: { event: EventRow | null; onClose: () =
             <span className="truncate text-sm text-muted-foreground flex-1">{url}</span>
             <Button size="sm" variant="ghost" className="rounded-full gap-1.5" onClick={copy}>
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-              {copied ? "Copied" : "Copy"}
+              {copied ? "Copiado" : "Copiar"}
             </Button>
           </div>
         </div>

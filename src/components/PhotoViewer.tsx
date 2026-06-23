@@ -26,7 +26,7 @@ export function printPhoto(url: string) {
     toast.error("Pop-up bloqueado. Permita pop-ups para imprimir.");
     return;
   }
-  w.document.write(`<!doctype html><html><head><title>Imprimir foto</title>
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><title>Imprimir foto</title>
     <style>
       @page { size: 10cm 15cm; margin: 0; }
       html,body { margin:0; padding:0; background:#fff; }
