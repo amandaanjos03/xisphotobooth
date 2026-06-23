@@ -777,7 +777,7 @@ function UploadFlow({
         type="file"
         accept="image/*"
         multiple={event.photo_count > 1}
-        capture="environment"
+        {...(source === "camera" ? { capture: "environment" as const } : {})}
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
