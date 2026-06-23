@@ -110,7 +110,7 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
         </p>
       )}
       <p className="mx-auto mt-6 max-w-md text-muted-foreground">
-        Get ready — we'll capture 4 photos with a 3-second countdown each. Strike a pose!
+        Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Capriche na pose!
       </p>
       <button
         onClick={onStart}
@@ -125,6 +125,7 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
 }
 
 function RecentPhotos({ event }: { event: EventRow }) {
+  const [viewing, setViewing] = useState<{ id: string; photo_url: string } | null>(null);
   const q = useQuery({
     queryKey: ["photos", event.id, "recent"],
     queryFn: async () => {
@@ -181,10 +182,9 @@ function RecentPhotos({ event }: { event: EventRow }) {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {photos.map((p) => (
-          <Link
+          <button
             key={p.id}
-            to="/event/$slug/gallery"
-            params={{ slug: event.slug }}
+            onClick={() => setViewing(p)}
             className="group relative aspect-square overflow-hidden rounded-xl bg-muted card-soft transition active:scale-95"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -194,9 +194,15 @@ function RecentPhotos({ event }: { event: EventRow }) {
               loading="lazy"
               className="absolute inset-0 size-full object-cover transition-transform group-hover:scale-105"
             />
-          </Link>
+          </button>
         ))}
       </div>
+      <PhotoViewer
+        url={viewing?.photo_url ?? null}
+        filename={`${event.slug}-${viewing?.id ?? ""}.jpg`}
+        open={!!viewing}
+        onOpenChange={(o) => !o && setViewing(null)}
+      />
     </div>
   );
 }
