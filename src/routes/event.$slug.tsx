@@ -1,10 +1,15 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadAndSign } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
-import { Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft,
+  ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
 
@@ -40,7 +45,6 @@ export const Route = createFileRoute("/event/$slug")({
       <div className="card-soft p-8 max-w-md text-center">
         <h1 className="font-display text-3xl font-bold">Evento não encontrado</h1>
         <p className="mt-2 text-muted-foreground">Este link de cabine é inválido ou foi removido.</p>
-        <Button asChild className="mt-6 rounded-full"><Link to="/admin">Ir para o painel</Link></Button>
       </div>
     </div>
   ),
@@ -54,34 +58,63 @@ export const Route = createFileRoute("/event/$slug")({
   ),
 });
 
-type Phase = "welcome" | "capture" | "composing" | "done";
+type Phase = "welcome" | "capture" | "upload" | "composing" | "done";
+
+const ACCESS_KEY_PREFIX = "xis:access:";
 
 function BoothPage() {
   const { event } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
-  const [finalUrl, setFinalUrl] = useState<string | null>(null);
+  const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string } | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
+
+  // Persist unlock in sessionStorage so refreshing the kiosk doesn't re-prompt the guest.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug) === "1") {
+      setUnlocked(true);
+    }
+  }, [event.slug]);
 
   function reset() {
-    setFinalUrl(null);
+    setFinalPhoto(null);
     setPhase("welcome");
+  }
+
+  if (!unlocked) {
+    return <AccessGate event={event} onUnlock={() => setUnlocked(true)} />;
   }
 
   return (
     <div className="min-h-screen bg-blob">
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-between">
-          <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> Painel
+          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-4" /> Início
           </Link>
           <div className="text-xs uppercase tracking-widest text-muted-foreground">Xis Photo Booth</div>
         </div>
       </header>
 
-      {phase === "welcome" && <Welcome event={event} onStart={() => setPhase("capture")} />}
+      {phase === "welcome" && (
+        <Welcome
+          event={event}
+          onStart={() => setPhase("capture")}
+          onUpload={() => setPhase("upload")}
+        />
+      )}
       {phase === "capture" && (
         <CaptureFlow
           event={event}
-          onDone={(url) => { setFinalUrl(url); setPhase("done"); }}
+          onDone={(photo) => { setFinalPhoto(photo); setPhase("done"); }}
+          onCancel={reset}
+          onComposing={() => setPhase("composing")}
+        />
+      )}
+      {phase === "upload" && (
+        <UploadFlow
+          event={event}
+          onDone={(photo) => { setFinalPhoto(photo); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
         />
@@ -92,12 +125,70 @@ function BoothPage() {
           <p className="mt-4 font-display text-lg">Montando sua composição…</p>
         </div>
       )}
-      {phase === "done" && finalUrl && <DoneScreen event={event} url={finalUrl} onReset={reset} />}
+      {phase === "done" && finalPhoto && (
+        <DoneScreen event={event} photo={finalPhoto} onReset={reset} />
+      )}
     </div>
   );
 }
 
-function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
+function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc(
+      "verify_event_code" as never,
+      { _slug: event.slug, _code: code.trim() } as never,
+    );
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    if (data === true) {
+      window.sessionStorage.setItem(ACCESS_KEY_PREFIX + event.slug, "1");
+      onUnlock();
+    } else {
+      toast.error("Senha incorreta. Confira com o anfitrião do evento.");
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-blob grid place-items-center px-4">
+      <div className="card-soft p-8 max-w-md w-full text-center">
+        <div className="mx-auto size-14 rounded-2xl bg-accent grid place-items-center">
+          <KeyRound className="size-7 text-accent-foreground" />
+        </div>
+        <h1 className="mt-4 font-display text-3xl font-bold">{event.name}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Informe a senha do evento que o anfitrião compartilhou junto com o link.
+        </p>
+        <form onSubmit={submit} className="mt-6 space-y-3">
+          <Label htmlFor="code" className="sr-only">Senha do evento</Label>
+          <Input
+            id="code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="000000"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            className="text-center text-3xl tracking-[0.4em] h-16 font-display"
+            maxLength={12}
+            required
+          />
+          <Button type="submit" disabled={busy} className="w-full rounded-full h-12 text-base">
+            {busy ? <Loader2 className="size-4 animate-spin" /> : "Entrar na cabine"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Welcome({
+  event, onStart, onUpload,
+}: { event: EventRow; onStart: () => void; onUpload: () => void }) {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-20 text-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
@@ -110,15 +201,24 @@ function Welcome({ event, onStart }: { event: EventRow; onStart: () => void }) {
         </p>
       )}
       <p className="mx-auto mt-6 max-w-md text-muted-foreground">
-        Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Capriche na pose!
+        Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
       </p>
-      <button
-        onClick={onStart}
-        className="mt-10 inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.42_0.075_188/0.55)] transition active:scale-95 hover:opacity-95"
-      >
-        <Camera className="size-6 sm:size-7" />
-        Tirar Fotos
-      </button>
+      <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <button
+          onClick={onStart}
+          className="inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.42_0.075_188/0.55)] transition active:scale-95 hover:opacity-95"
+        >
+          <Camera className="size-6 sm:size-7" />
+          Tirar Fotos
+        </button>
+        <button
+          onClick={onUpload}
+          className="inline-flex items-center gap-3 rounded-full bg-secondary px-8 py-4 sm:px-10 sm:py-5 text-lg sm:text-xl font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
+        >
+          <Upload className="size-5 sm:size-6" />
+          Enviar Foto
+        </button>
+      </div>
       <AlbumGrid event={event} />
     </div>
   );
@@ -278,11 +378,28 @@ function AlbumGrid({ event }: { event: EventRow }) {
 const TARGET_W = 720;
 const TARGET_H = 960; // 3:4 portrait per shot
 
+async function finalizeAndUpload(
+  shots: string[],
+  event: EventRow,
+  count: number,
+): Promise<{ id: string; url: string }> {
+  const blob = await composeStrip(shots, event.frame_url, count);
+  const path = `${event.slug}/${Date.now()}.jpg`;
+  const url = await uploadAndSign("event-photos", path, blob, "image/jpeg");
+  const { data, error } = await supabase
+    .from("photos")
+    .insert({ event_id: event.id, photo_url: url })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return { id: (data as { id: string }).id, url };
+}
+
 function CaptureFlow({
   event, onDone, onCancel, onComposing,
 }: {
   event: EventRow;
-  onDone: (url: string) => void;
+  onDone: (photo: { id: string; url: string }) => void;
   onCancel: () => void;
   onComposing: () => void;
 }) {
@@ -290,12 +407,11 @@ function CaptureFlow({
   const streamRef = useRef<MediaStream | null>(null);
   const [ready, setReady] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [shotIndex, setShotIndex] = useState(0); // 0..4
+  const [shotIndex, setShotIndex] = useState(0);
   const [flash, setFlash] = useState(false);
-  const [shots, setShots] = useState<string[]>([]); // dataURLs
+  const [shots, setShots] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Start camera
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -328,7 +444,6 @@ function CaptureFlow({
     canvas.width = TARGET_W;
     canvas.height = TARGET_H;
     const ctx = canvas.getContext("2d")!;
-    // cover-crop the video into target rect
     const vw = v.videoWidth, vh = v.videoHeight;
     const targetRatio = TARGET_W / TARGET_H;
     const videoRatio = vw / vh;
@@ -340,7 +455,6 @@ function CaptureFlow({
       sh = vw / targetRatio;
       sy = (vh - sh) / 2;
     }
-    // mirror selfie
     ctx.save();
     ctx.translate(TARGET_W, 0);
     ctx.scale(-1, 1);
@@ -349,13 +463,12 @@ function CaptureFlow({
     return canvas.toDataURL("image/jpeg", 0.92);
   }, []);
 
-  // Sequence: 4 shots, 3s countdown each, 2s pause between
   useEffect(() => {
     if (!ready || error) return;
     if (shotIndex >= event.photo_count) return;
 
     let alive = true;
-    const initialDelay = shotIndex === 0 ? 800 : 2000; // pause between
+    const initialDelay = shotIndex === 0 ? 800 : 2000;
 
     const t0 = setTimeout(() => {
       if (!alive) return;
@@ -369,7 +482,6 @@ function CaptureFlow({
         } else {
           clearInterval(tick);
           setCountdown(null);
-          // capture
           const data = captureFrame();
           setFlash(true);
           setTimeout(() => setFlash(false), 180);
@@ -380,19 +492,15 @@ function CaptureFlow({
     }, initialDelay);
 
     return () => { alive = false; clearTimeout(t0); };
-  }, [ready, shotIndex, captureFrame, error]);
+  }, [ready, shotIndex, captureFrame, error, event.photo_count]);
 
-  // When all shots done, compose & upload
   useEffect(() => {
     if (shots.length < event.photo_count) return;
     onComposing();
     (async () => {
       try {
-        const blob = await composeStrip(shots, event.frame_url, event.photo_count);
-        const path = `${event.slug}/${Date.now()}.jpg`;
-        const url = await uploadAndSign("event-photos", path, blob, "image/jpeg");
-        await supabase.from("photos").insert({ event_id: event.id, photo_url: url });
-        onDone(url);
+        const photo = await finalizeAndUpload(shots, event, event.photo_count);
+        onDone(photo);
       } catch (e) {
         toast.error((e as Error).message);
         onCancel();
@@ -435,7 +543,6 @@ function CaptureFlow({
           </div>
         )}
 
-        {/* shots strip */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 p-2 rounded-2xl bg-black/40 backdrop-blur-sm">
           {Array.from({ length: event.photo_count }, (_, i) => i).map((i) => (
             <div key={i} className="size-14 sm:size-16 rounded-md overflow-hidden border-2 border-white/70 bg-black/30">
@@ -460,11 +567,146 @@ function CaptureFlow({
   );
 }
 
+function UploadFlow({
+  event, onDone, onCancel, onComposing,
+}: {
+  event: EventRow;
+  onDone: (photo: { id: string; url: string }) => void;
+  onCancel: () => void;
+  onComposing: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  // Open picker right away so guests don't see an empty intermediate screen.
+  useEffect(() => {
+    inputRef.current?.click();
+  }, []);
+
+  useEffect(() => {
+    if (files.length === 0) { setPreviews([]); return; }
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [files]);
+
+  function handleFiles(list: FileList | null) {
+    if (!list || list.length === 0) return;
+    const arr = Array.from(list)
+      .filter((f) => f.type.startsWith("image/"))
+      .slice(0, event.photo_count);
+    setFiles(arr);
+  }
+
+  async function readAsDataUrl(file: File): Promise<string> {
+    // Re-encode to JPEG via canvas to normalize EXIF orientation issues
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await loadImage(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = TARGET_W;
+      canvas.height = TARGET_H;
+      const ctx = canvas.getContext("2d")!;
+      const ir = img.width / img.height, tr = TARGET_W / TARGET_H;
+      let sw = img.width, sh = img.height, sx = 0, sy = 0;
+      if (ir > tr) { sw = img.height * tr; sx = (img.width - sw) / 2; }
+      else { sh = img.width / tr; sy = (img.height - sh) / 2; }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
+      return canvas.toDataURL("image/jpeg", 0.92);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  async function submit() {
+    if (files.length === 0) return toast.error("Selecione ao menos uma foto");
+    setBusy(true);
+    onComposing();
+    try {
+      const shots = await Promise.all(files.map(readAsDataUrl));
+      // Pad with last shot if user selected fewer than event.photo_count
+      while (shots.length < event.photo_count) shots.push(shots[shots.length - 1]);
+      const photo = await finalizeAndUpload(shots, event, event.photo_count);
+      onDone(photo);
+    } catch (e) {
+      toast.error((e as Error).message);
+      onCancel();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 sm:px-6 py-8 sm:py-12">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple={event.photo_count > 1}
+        capture="environment"
+        className="hidden"
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+
+      <div className="card-soft p-6 sm:p-8">
+        <div className="flex items-center gap-3">
+          <div className="size-12 rounded-2xl bg-accent grid place-items-center">
+            <Upload className="size-6 text-accent-foreground" />
+          </div>
+          <div>
+            <h2 className="font-display text-2xl font-bold leading-tight">Enviar foto</h2>
+            <p className="text-sm text-muted-foreground">
+              Selecione {event.photo_count === 1
+                ? "uma foto"
+                : `até ${event.photo_count} fotos`} — vamos aplicar a moldura do evento e adicionar ao álbum.
+            </p>
+          </div>
+        </div>
+
+        {previews.length > 0 && (
+          <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {previews.map((p, i) => (
+              <div key={i} className="aspect-[3/4] rounded-lg overflow-hidden bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p} alt={`Foto ${i + 1}`} className="size-full object-cover" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="rounded-full gap-2"
+            onClick={() => inputRef.current?.click()}
+          >
+            <Upload className="size-4" />
+            {previews.length === 0 ? "Escolher fotos" : "Trocar seleção"}
+          </Button>
+          <Button
+            type="button"
+            onClick={submit}
+            disabled={busy || files.length === 0}
+            className="rounded-full gap-2"
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : "Enviar para a galeria"}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onCancel} className="rounded-full ml-auto">
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Compose photo strip with frame overlay; supports 1, 2, 3 or 4 photos
 async function composeStrip(shots: string[], frameUrl: string | null, count: number): Promise<Blob> {
   const cellW = 600, cellH = 800, gap = 24, pad = 36;
 
-  // Layouts: cols x rows
   let cols = 1, rows = 1;
   if (count === 1) { cols = 1; rows = 1; }
   else if (count === 2) { cols = 1; rows = 2; }
@@ -484,7 +726,6 @@ async function composeStrip(shots: string[], frameUrl: string | null, count: num
   grad.addColorStop(1, "#f1e3a8");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
-
 
   const positions: [number, number][] = [];
   for (let r = 0; r < rows; r++) {
@@ -538,10 +779,15 @@ function loadImage(src: string, cors = false): Promise<HTMLImageElement> {
   });
 }
 
-function DoneScreen({ event, url, onReset }: { event: EventRow; url: string; onReset: () => void }) {
+function DoneScreen({
+  event, photo, onReset,
+}: { event: EventRow; photo: { id: string; url: string }; onReset: () => void }) {
+  const qc = useQueryClient();
+  const [deleting, setDeleting] = useState(false);
+
   function download() {
     const a = document.createElement("a");
-    a.href = url;
+    a.href = photo.url;
     a.download = `${event.slug}-${Date.now()}.jpg`;
     a.target = "_blank";
     a.rel = "noopener";
@@ -551,16 +797,32 @@ function DoneScreen({ event, url, onReset }: { event: EventRow; url: string; onR
   }
   function print() { window.print(); }
 
+  async function deleteSelf() {
+    if (!confirm("Excluir esta foto que você acabou de tirar? Essa ação não pode ser desfeita.")) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("photos").delete().eq("id", photo.id);
+      if (error) throw error;
+      toast.success("Foto removida");
+      qc.invalidateQueries({ queryKey: ["photos", event.id, "all"] });
+      onReset();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
       <div className="no-print text-center mb-6">
         <h2 className="font-display text-3xl sm:text-4xl font-bold">Ficou incrível! ✨</h2>
-        <p className="mt-2 text-muted-foreground">Sua composição está pronta.</p>
+        <p className="mt-2 text-muted-foreground">Sua composição está pronta e foi adicionada ao álbum.</p>
       </div>
 
       <div className="print-area card-soft p-3 bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
+        <img src={photo.url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
       </div>
 
       <div className="no-print mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -572,6 +834,18 @@ function DoneScreen({ event, url, onReset }: { event: EventRow; url: string; onR
         </Button>
         <Button onClick={onReset} variant="secondary" className="rounded-full gap-2 h-14 text-base" size="lg">
           <RotateCcw className="size-5" /> Novas Fotos
+        </Button>
+      </div>
+
+      <div className="no-print mt-4 text-center">
+        <Button
+          onClick={deleteSelf}
+          disabled={deleting}
+          variant="ghost"
+          className="rounded-full gap-2 text-muted-foreground hover:text-destructive"
+        >
+          {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+          Excluir esta foto
         </Button>
       </div>
     </div>

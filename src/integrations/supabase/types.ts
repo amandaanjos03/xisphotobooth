@@ -16,29 +16,35 @@ export type Database = {
     Tables: {
       events: {
         Row: {
+          access_code_hash: string | null
           created_at: string
           date: string | null
           frame_url: string | null
           id: string
           name: string
+          owner_id: string | null
           photo_count: number
           slug: string
         }
         Insert: {
+          access_code_hash?: string | null
           created_at?: string
           date?: string | null
           frame_url?: string | null
           id?: string
           name: string
+          owner_id?: string | null
           photo_count?: number
           slug: string
         }
         Update: {
+          access_code_hash?: string | null
           created_at?: string
           date?: string | null
           frame_url?: string | null
           id?: string
           name?: string
+          owner_id?: string | null
           photo_count?: number
           slug?: string
         }
@@ -102,11 +108,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_admin_role: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      hash_event_code: { Args: { _code: string }; Returns: string }
+      verify_event_code: {
+        Args: { _code: string; _slug: string }
         Returns: boolean
       }
     }

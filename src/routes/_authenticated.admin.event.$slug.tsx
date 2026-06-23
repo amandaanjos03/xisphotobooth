@@ -24,10 +24,14 @@ type PhotoRow = {
 export const Route = createFileRoute("/_authenticated/admin/event/$slug")({
   component: AdminEventGallery,
   loader: async ({ params }) => {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) throw notFound();
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug")
+      .select("id, name, slug, owner_id")
       .eq("slug", params.slug)
+      .eq("owner_id", uid)
       .maybeSingle();
     if (error) throw error;
     if (!data) throw notFound();
@@ -36,6 +40,7 @@ export const Route = createFileRoute("/_authenticated/admin/event/$slug")({
   head: ({ loaderData }) => ({
     meta: [{ title: loaderData ? `${loaderData.event.name} — Galeria` : "Galeria" }],
   }),
+
   notFoundComponent: () => (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="card-soft p-8 max-w-md text-center">

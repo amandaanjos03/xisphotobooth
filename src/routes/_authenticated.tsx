@@ -23,6 +23,9 @@ function AuthedLayout() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Idempotent: grants admin role to a freshly confirmed user.
+      try { await supabase.rpc("claim_admin_role" as never); } catch { /* ignore */ }
+
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
@@ -36,6 +39,7 @@ function AuthedLayout() {
       cancelled = true;
     };
   }, [user.id]);
+
 
   async function signOut() {
     await supabase.auth.signOut();
