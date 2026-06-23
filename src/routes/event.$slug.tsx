@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadAndSign } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
-import { Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft } from "lucide-react";
+import { Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft, Images } from "lucide-react";
 import { toast } from "sonner";
 
 type EventRow = {
