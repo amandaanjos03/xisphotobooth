@@ -81,21 +81,21 @@ function AuthPage() {
                 <Input id="email-in" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
               </div>
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="pw-in">Senha</Label>
-                  <button
-                    type="button"
-                    onClick={() => setForgotOpen(true)}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Esqueci minha senha
-                  </button>
-                </div>
+                <Label htmlFor="pw-in">Senha</Label>
                 <Input id="pw-in" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
               </div>
               <Button type="submit" disabled={busy} className="w-full rounded-full">
                 {busy ? <Loader2 className="size-4 animate-spin" /> : "Entrar"}
               </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
             </form>
           </TabsContent>
 

@@ -25,6 +25,7 @@ type EventRow = {
   photo_count: number;
   created_at: string;
   owner_id: string | null;
+  access_code: string | null;
   access_code_hash: string | null;
 };
 
@@ -189,6 +190,13 @@ function AdminDashboard() {
                       {countsQ.data?.[ev.id] ?? 0} fotos
                     </span>
                   </div>
+                  {ev.access_code && (
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
+                      <KeyRound className="size-3.5 text-primary" />
+                      <span className="text-muted-foreground">Senha:</span>
+                      <span className="font-display font-bold tracking-[0.25em] text-primary">{ev.access_code}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-auto flex items-center gap-2 flex-wrap">
                   <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setShareFor({ event: ev })}>
@@ -255,11 +263,6 @@ function CreateEventDialog({
     try {
       const slug = uniqueSlug(name);
       const code = generateAccessCode();
-      const { data: hashed, error: hashErr } = await supabase.rpc(
-        "hash_event_code" as never,
-        { _code: code } as never,
-      );
-      if (hashErr) throw hashErr;
 
       let frame_url: string | null = null;
       if (frame) {
@@ -272,7 +275,7 @@ function CreateEventDialog({
         frame_url,
         photo_count: photoCount,
         owner_id: ownerId,
-        access_code_hash: hashed as unknown as string,
+        access_code: code,
       };
       const { data, error } = await supabase
         .from("events")
@@ -365,6 +368,8 @@ function ShareDialog({
   const url = event && typeof window !== "undefined"
     ? `${window.location.origin}/event/${event.slug}`
     : "";
+  // Prefer the freshly-generated code; fall back to the stored plaintext.
+  const codeToShow = accessCode ?? event?.access_code ?? null;
 
   useEffect(() => {
     if (!event || !url) return;
@@ -374,8 +379,8 @@ function ShareDialog({
   }, [event, url]);
 
   async function copyAll() {
-    const text = accessCode
-      ? `${event?.name}\nLink: ${url}\nSenha: ${accessCode}`
+    const text = codeToShow
+      ? `${event?.name}\nLink: ${url}\nSenha: ${codeToShow}`
       : url;
     try {
       await navigator.clipboard.writeText(text);
@@ -409,23 +414,22 @@ function ShareDialog({
             )}
           </div>
 
-          {accessCode ? (
+          {codeToShow ? (
             <div className="w-full rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 text-center">
               <div className="text-xs uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5">
                 <KeyRound className="size-3.5" /> Senha do evento
               </div>
               <div className="mt-1 font-display text-4xl font-bold tracking-[0.4em] text-primary">
-                {accessCode}
+                {codeToShow}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Anote ou compartilhe agora — por segurança ela não será mostrada novamente.
+                Compartilhe com os convidados junto ao link. Você pode consultá-la a qualquer momento aqui.
               </p>
             </div>
           ) : (
             <div className="w-full rounded-xl border border-dashed border-border bg-muted/40 p-3 text-center text-xs text-muted-foreground">
               <KeyRound className="inline size-3.5 mr-1 -mt-0.5" />
-              A senha do evento foi mostrada na criação. Não está armazenada em texto — se a perdeu,
-              gere uma nova editando o evento.
+              Este evento foi criado antes do armazenamento de senhas. Crie um novo evento para gerar uma senha visível.
             </div>
           )}
 
@@ -433,7 +437,7 @@ function ShareDialog({
             <span className="truncate text-sm text-muted-foreground flex-1">{url}</span>
             <Button size="sm" variant="ghost" className="rounded-full gap-1.5" onClick={copyAll}>
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-              {copied ? "Copiado" : accessCode ? "Copiar tudo" : "Copiar link"}
+              {copied ? "Copiado" : codeToShow ? "Copiar tudo" : "Copiar link"}
             </Button>
           </div>
         </div>

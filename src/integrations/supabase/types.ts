@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       events: {
         Row: {
+          access_code: string | null
           access_code_hash: string | null
           created_at: string
           date: string | null
@@ -27,6 +28,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          access_code?: string | null
           access_code_hash?: string | null
           created_at?: string
           date?: string | null
@@ -38,6 +40,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          access_code?: string | null
           access_code_hash?: string | null
           created_at?: string
           date?: string | null
