@@ -281,11 +281,17 @@ function EventFormFields({
     photoCount: 1 | 2 | 3 | 4;
     description: string;
     printLayout: PrintLayout;
+    overlayType: OverlayType;
+    logoPosition: LogoPosition;
+    logoSize: number;
     frame: File | null;
+    logo: File | null;
     bg: File | null;
     framePreview: string | null;
+    logoPreview: string | null;
     bgPreview: string | null;
     existingFrameUrl?: string | null;
+    existingLogoUrl?: string | null;
     existingBgUrl?: string | null;
   };
   onChange: (patch: Partial<typeof values>) => void;
@@ -344,21 +350,98 @@ function EventFormFields({
         </select>
         <p className="text-xs text-muted-foreground">Define o tamanho da composição final e da página de impressão.</p>
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="frame">Moldura (PNG transparente)</Label>
-        <Input
-          id="frame"
-          type="file"
-          accept="image/png,image/webp"
-          onChange={(e) => onChange({ frame: e.target.files?.[0] ?? null })}
-        />
-        {(values.framePreview || values.existingFrameUrl) && (
-          <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={values.framePreview ?? values.existingFrameUrl ?? ""} alt="Moldura" className="size-full object-contain" />
-          </div>
-        )}
+        <Label>Sobreposição nas fotos</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {(["frame", "logo"] as OverlayType[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => onChange({ overlayType: t })}
+              className={`h-11 rounded-lg border text-sm font-semibold transition ${
+                values.overlayType === t
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-input bg-background hover:bg-accent"
+              }`}
+            >
+              {t === "frame" ? "Moldura completa" : "Logo"}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {values.overlayType === "frame" ? (
+        <div className="space-y-2">
+          <Label htmlFor="frame">Moldura (PNG transparente)</Label>
+          <Input
+            id="frame"
+            type="file"
+            accept="image/png,image/webp"
+            onChange={(e) => onChange({ frame: e.target.files?.[0] ?? null })}
+          />
+          {(values.framePreview || values.existingFrameUrl) && (
+            <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={values.framePreview ?? values.existingFrameUrl ?? ""} alt="Moldura" className="size-full object-contain" />
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="logo">Logo (PNG transparente recomendado)</Label>
+            <Input
+              id="logo"
+              type="file"
+              accept="image/png,image/webp,image/jpeg"
+              onChange={(e) => onChange({ logo: e.target.files?.[0] ?? null })}
+            />
+            {(values.logoPreview || values.existingLogoUrl) && (
+              <div className="mt-2 h-32 rounded-lg border border-border overflow-hidden grid place-items-center bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={values.logoPreview ?? values.existingLogoUrl ?? ""} alt="Logo" className="max-h-full max-w-full object-contain" />
+              </div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Posição do logo</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {(["top", "bottom", "left", "right"] as LogoPosition[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => onChange({ logoPosition: p })}
+                  className={`h-10 rounded-lg border text-xs font-semibold transition ${
+                    values.logoPosition === p
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-background hover:bg-accent"
+                  }`}
+                >
+                  {p === "top" ? "Topo" : p === "bottom" ? "Base" : p === "left" ? "Esquerda" : "Direita"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="logoSize">Tamanho do logo ({values.logoSize}%)</Label>
+            <input
+              id="logoSize"
+              type="range"
+              min={5}
+              max={60}
+              step={1}
+              value={values.logoSize}
+              onChange={(e) => onChange({ logoSize: Number(e.target.value) })}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Percentual em relação à {values.logoPosition === "left" || values.logoPosition === "right" ? "altura" : "largura"} da composição.
+            </p>
+          </div>
+        </>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="bg">Imagem de fundo do convidado (opcional)</Label>
         <Input
