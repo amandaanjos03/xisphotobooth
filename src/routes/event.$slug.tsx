@@ -328,7 +328,7 @@ async function composeStrip(shots: string[], frameUrl: string | null): Promise<B
     [pad, pad + cellH + gap],
     [pad + cellW + gap, pad + cellH + gap],
   ];
-  const imgs = await Promise.all(shots.map(loadImage));
+  const imgs = await Promise.all(shots.map((s) => loadImage(s)));
   imgs.forEach((img, i) => {
     const [x, y] = positions[i];
     // white frame
