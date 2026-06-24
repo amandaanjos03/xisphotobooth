@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft,
+  Camera, Printer, Download, RotateCcw, Loader2,
   ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
   RefreshCw, Maximize2, Minimize2,
 } from "lucide-react";
