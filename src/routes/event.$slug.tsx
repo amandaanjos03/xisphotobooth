@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Camera, Printer, Download, RotateCcw, Loader2, ArrowLeft,
+  Camera, Printer, Download, RotateCcw, Loader2,
   ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
   RefreshCw, Maximize2, Minimize2,
 } from "lucide-react";
@@ -142,14 +142,9 @@ function BoothPage() {
     >
       <PrintPageStyle layout={event.print_layout ?? "portrait"} />
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-between">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> Entrar
-          </Link>
-          <div className="flex items-center gap-2">
-            <FullScreenToggle />
-            <div className="text-xs uppercase tracking-widest text-muted-foreground hidden sm:block">Xis Photo Booth</div>
-          </div>
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-end gap-2">
+          <FullScreenToggle />
+          <div className="text-xs uppercase tracking-widest text-muted-foreground hidden sm:block">Xis Photo Booth</div>
         </div>
       </header>
 
