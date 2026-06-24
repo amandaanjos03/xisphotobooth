@@ -152,19 +152,35 @@ function AdminEventGallery() {
   return (
     <div className="min-h-screen bg-blob">
       <header className="border-b border-border/60 backdrop-blur-sm bg-background/60 sticky top-0 z-10">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
           <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Painel
           </Link>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="rounded-full gap-1.5"
-            disabled={photos.length === 0}
-            onClick={() => downloadAll(photos)}
-          >
-            <Download className="size-3.5" /> Salvar todas
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="rounded-full gap-1.5"
+              disabled={photos.length === 0}
+              onClick={() => downloadAll(photos)}
+            >
+              <Download className="size-3.5" /> Salvar todas
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-full gap-1.5 text-muted-foreground hover:text-destructive"
+              disabled={photos.length === 0 || delAllPhotos.isPending}
+              onClick={() => {
+                if (confirm(`Apagar TODAS as ${photos.length} fotos deste evento? Esta ação não pode ser desfeita.`)) {
+                  delAllPhotos.mutate(photos);
+                }
+              }}
+            >
+              {delAllPhotos.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+              Apagar todas
+            </Button>
+          </div>
         </div>
       </header>
 
