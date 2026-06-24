@@ -15,6 +15,7 @@ import {
 import {
   Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
   ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
+  CopyPlus,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -108,6 +109,45 @@ function AdminDashboard() {
       toast.success("Evento excluído");
       qc.invalidateQueries({ queryKey: ["events", user.id] });
       qc.invalidateQueries({ queryKey: ["photo-counts", user.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const dupMut = useMutation({
+    mutationFn: async (ev: EventRow) => {
+      const newName = `${ev.name} (cópia)`;
+      const newSlug = uniqueSlug(newName);
+      const newCode = ev.requires_code ? generateAccessCode() : null;
+      const insert = {
+        name: newName,
+        slug: newSlug,
+        date: ev.date,
+        frame_url: ev.frame_url,
+        bg_url: ev.bg_url,
+        description: ev.description,
+        print_layout: ev.print_layout,
+        photo_count: ev.photo_count,
+        overlay_type: ev.overlay_type,
+        logo_url: ev.logo_url,
+        logo_position: ev.logo_position,
+        logo_size: ev.logo_size,
+        requires_code: ev.requires_code,
+        access_code: newCode,
+        access_code_hash: null,
+        owner_id: user.id,
+      };
+      const { data, error } = await supabase
+        .from("events")
+        .insert(insert as never)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return { event: data as unknown as EventRow, code: newCode };
+    },
+    onSuccess: ({ event, code }) => {
+      toast.success("Evento duplicado");
+      qc.invalidateQueries({ queryKey: ["events", user.id] });
+      setShareFor({ event, code: code ?? undefined });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -239,6 +279,17 @@ function AdminDashboard() {
                   </Button>
                   <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setEditing(ev)}>
                     <Pencil className="size-3.5" /> Editar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-full gap-1.5"
+                    disabled={dupMut.isPending}
+                    onClick={() => dupMut.mutate(ev)}
+                    title="Duplicar evento"
+                  >
+                    {dupMut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <CopyPlus className="size-3.5" />}
+                    Duplicar
                   </Button>
                   <Button asChild variant="ghost" size="sm" className="rounded-full gap-1.5">
                     <Link to="/event/$slug" params={{ slug: ev.slug }}>
