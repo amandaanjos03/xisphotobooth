@@ -103,14 +103,38 @@ function AdminEventGallery() {
 
   const delPhoto = useMutation({
     mutationFn: async (p: PhotoRow) => {
-      const path = extractStoragePath(p.photo_url);
-      if (path) await supabase.storage.from("event-photos").remove([path]);
+      // Try storage cleanup but don't fail the delete if it errors (RLS/permissions).
+      try {
+        const path = extractStoragePath(p.photo_url);
+        if (path) await supabase.storage.from("event-photos").remove([path]);
+      } catch { /* ignore storage cleanup errors */ }
       const { error } = await supabase.from("photos").delete().eq("id", p.id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Foto excluída");
       qc.invalidateQueries({ queryKey: ["photos", event.id, "admin"] });
+      qc.invalidateQueries({ queryKey: ["photos", event.id, "all"] });
+      qc.invalidateQueries({ queryKey: ["photo-counts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const delAllPhotos = useMutation({
+    mutationFn: async (ps: PhotoRow[]) => {
+      try {
+        const paths = ps
+          .map((p) => extractStoragePath(p.photo_url))
+          .filter((x): x is string => !!x);
+        if (paths.length) await supabase.storage.from("event-photos").remove(paths);
+      } catch { /* ignore storage cleanup errors */ }
+      const { error } = await supabase.from("photos").delete().eq("event_id", event.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Todas as fotos foram excluídas");
+      qc.invalidateQueries({ queryKey: ["photos", event.id, "admin"] });
+      qc.invalidateQueries({ queryKey: ["photos", event.id, "all"] });
       qc.invalidateQueries({ queryKey: ["photo-counts"] });
     },
     onError: (e: Error) => toast.error(e.message),

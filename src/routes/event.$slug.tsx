@@ -142,14 +142,9 @@ function BoothPage() {
     >
       <PrintPageStyle layout={event.print_layout ?? "portrait"} />
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-between">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> Entrar
-          </Link>
-          <div className="flex items-center gap-2">
-            <FullScreenToggle />
-            <div className="text-xs uppercase tracking-widest text-muted-foreground hidden sm:block">Xis Photo Booth</div>
-          </div>
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-end gap-2">
+          <FullScreenToggle />
+          <div className="text-xs uppercase tracking-widest text-muted-foreground hidden sm:block">Xis Photo Booth</div>
         </div>
       </header>
 
