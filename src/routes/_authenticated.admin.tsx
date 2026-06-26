@@ -992,3 +992,28 @@ function ShareDialog({
     </Dialog>
   );
 }
+
+function SummaryStats({ events, counts }: { events: EventRow[]; counts: Record<string, number> }) {
+  const totalEvents = events.length;
+  const totalPhotos = events.reduce((s, e) => s + (counts[e.id] ?? 0), 0);
+  const totalViews = events.reduce((s, e) => s + (e.view_count ?? 0), 0);
+  const totalDownloads = events.reduce((s, e) => s + (e.download_count ?? 0), 0);
+  const cards = [
+    { label: "Eventos ativos", value: totalEvents, icon: Calendar },
+    { label: "Fotos & vídeos", value: totalPhotos, icon: ImageIcon },
+    { label: "Acessos aos links", value: totalViews, icon: Eye },
+    { label: "Downloads", value: totalDownloads, icon: Download },
+  ];
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      {cards.map((c) => (
+        <div key={c.label} className="card-soft p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
+            <c.icon className="size-4" /> {c.label}
+          </div>
+          <div className="font-display text-2xl font-bold mt-1">{c.value.toLocaleString("pt-BR")}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
