@@ -345,7 +345,7 @@ function Welcome({
 function AlbumGrid({ event }: { event: EventRow }) {
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(0);
-  const [viewing, setViewing] = useState<{ id: string; photo_url: string } | null>(null);
+  const [viewing, setViewing] = useState<{ id: string; photo_url: string; media_type: MediaType } | null>(null);
   const [downloading, setDownloading] = useState(false);
 
   const q = useQuery({
@@ -353,12 +353,12 @@ function AlbumGrid({ event }: { event: EventRow }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("photos")
-        .select("id, photo_url")
+        .select("id, photo_url, media_type")
         .eq("event_id", event.id)
         .eq("hidden", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as { id: string; photo_url: string }[];
+      return data as { id: string; photo_url: string; media_type: MediaType }[];
     },
     refetchOnWindowFocus: false,
   });
@@ -382,7 +382,8 @@ function AlbumGrid({ event }: { event: EventRow }) {
     setDownloading(true);
     try {
       for (let i = 0; i < photos.length; i++) {
-        await downloadPhoto(photos[i].photo_url, `${event.slug}-${i + 1}.jpg`);
+        const ext = photos[i].media_type === "video" ? "mp4" : "jpg";
+        await downloadPhoto(photos[i].photo_url, `${event.slug}-${i + 1}.${ext}`);
         await new Promise((r) => setTimeout(r, 250));
       }
       toast.success("Download iniciado");
@@ -399,7 +400,7 @@ function AlbumGrid({ event }: { event: EventRow }) {
         <div>
           <h2 className="font-display text-2xl sm:text-3xl font-bold">Álbum do evento</h2>
           <p className="text-sm text-muted-foreground">
-            {photos.length} foto{photos.length === 1 ? "" : "s"} • Página {safePage + 1} de {totalPages}
+            {photos.length} item{photos.length === 1 ? "" : "s"} • Página {safePage + 1} de {totalPages}
           </p>
         </div>
         <Button
@@ -409,42 +410,66 @@ function AlbumGrid({ event }: { event: EventRow }) {
           variant="secondary"
         >
           {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-          Baixar todas as imagens
+          Baixar todas as mídias
         </Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {slice.map((p, i) => {
           const absoluteIndex = safePage * PAGE_SIZE + i + 1;
+          const isVideo = p.media_type === "video";
+          const ext = isVideo ? "mp4" : "jpg";
           return (
             <div
               key={p.id}
               className="group relative aspect-square overflow-hidden rounded-xl bg-muted card-soft"
             >
               <button
-                onClick={() => setViewing(p)}
+                onClick={() => {
+                  if (isVideo) window.open(p.photo_url, "_blank", "noopener");
+                  else setViewing(p);
+                }}
                 className="absolute inset-0 transition active:scale-95"
-                aria-label={`Ver foto ${absoluteIndex}`}
+                aria-label={`Ver mídia ${absoluteIndex}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={p.photo_url}
-                  alt=""
-                  loading="lazy"
-                  className="size-full object-cover transition-transform group-hover:scale-105"
-                />
+                {isVideo ? (
+                  <>
+                    <video
+                      src={p.photo_url}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      className="size-full object-cover"
+                    />
+                    <div className="absolute inset-0 grid place-items-center bg-black/30">
+                      <div className="size-12 rounded-full bg-white/90 grid place-items-center">
+                        <Play className="size-5 text-foreground" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={p.photo_url}
+                    alt=""
+                    loading="lazy"
+                    className="size-full object-cover transition-transform group-hover:scale-105"
+                  />
+                )}
               </button>
               <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition">
+                {!isVideo && (
+                  <button
+                    onClick={() => printPhoto(p.photo_url)}
+                    className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
+                    aria-label="Imprimir"
+                    title="Imprimir"
+                  >
+                    <Printer className="size-4" />
+                  </button>
+                )}
                 <button
-                  onClick={() => printPhoto(p.photo_url)}
-                  className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
-                  aria-label="Imprimir"
-                  title="Imprimir"
-                >
-                  <Printer className="size-4" />
-                </button>
-                <button
-                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.jpg`)}
+                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.${ext}`)}
                   className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
                   aria-label="Baixar"
                   title="Baixar"
