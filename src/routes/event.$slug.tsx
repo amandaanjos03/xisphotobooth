@@ -80,6 +80,16 @@ const ACCESS_KEY_PREFIX = "xis:access:";
 function BoothPage() {
   const { event } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
+
+  // Track guest link access once per session.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const key = `xis:view:${event.slug}`;
+    if (window.sessionStorage.getItem(key)) return;
+    window.sessionStorage.setItem(key, "1");
+    supabase.rpc("increment_event_view" as never, { _slug: event.slug } as never).then(() => {}, () => {});
+  }, [event.slug]);
+
   const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
   const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string; mediaType: MediaType } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
@@ -1357,6 +1367,10 @@ function loadImage(src: string, cors = false): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error("Image load failed"));
     img.src = src;
   });
+}
+
+function trackDownload(eventId: string) {
+  supabase.rpc("increment_event_download" as never, { _event_id: eventId } as never).then(() => {}, () => {});
 }
 
 function DoneScreen({
