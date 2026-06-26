@@ -83,6 +83,7 @@ export type Database = {
           event_id: string
           hidden: boolean
           id: string
+          media_type: string
           photo_url: string
         }
         Insert: {
@@ -90,6 +91,7 @@ export type Database = {
           event_id: string
           hidden?: boolean
           id?: string
+          media_type?: string
           photo_url: string
         }
         Update: {
@@ -97,6 +99,7 @@ export type Database = {
           event_id?: string
           hidden?: boolean
           id?: string
+          media_type?: string
           photo_url?: string
         }
         Relationships: [
