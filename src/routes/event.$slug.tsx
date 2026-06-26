@@ -1200,14 +1200,16 @@ function loadImage(src: string, cors = false): Promise<HTMLImageElement> {
 
 function DoneScreen({
   event, photo, onReset,
-}: { event: EventRow; photo: { id: string; url: string }; onReset: () => void }) {
+}: { event: EventRow; photo: { id: string; url: string; mediaType: MediaType }; onReset: () => void }) {
   const qc = useQueryClient();
   const [deleting, setDeleting] = useState(false);
+  const isVideo = photo.mediaType === "video";
 
   function download() {
+    const ext = isVideo ? (photo.url.includes(".webm") ? "webm" : "mp4") : "jpg";
     const a = document.createElement("a");
     a.href = photo.url;
-    a.download = `${event.slug}-${Date.now()}.jpg`;
+    a.download = `${event.slug}-${Date.now()}.${ext}`;
     a.target = "_blank";
     a.rel = "noopener";
     document.body.appendChild(a);
@@ -1217,12 +1219,12 @@ function DoneScreen({
   function print() { window.print(); }
 
   async function deleteSelf() {
-    if (!confirm("Excluir esta foto que você acabou de tirar? Essa ação não pode ser desfeita.")) return;
+    if (!confirm("Excluir esta mídia que você acabou de enviar? Essa ação não pode ser desfeita.")) return;
     setDeleting(true);
     try {
       const { error } = await supabase.from("photos").delete().eq("id", photo.id);
       if (error) throw error;
-      toast.success("Foto removida");
+      toast.success("Mídia removida");
       qc.invalidateQueries({ queryKey: ["photos", event.id, "all"] });
       onReset();
     } catch (e) {
@@ -1235,24 +1237,34 @@ function DoneScreen({
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
       <div className="no-print text-center mb-6">
-        <h2 className="font-display text-3xl sm:text-4xl font-bold">Ficou incrível! ✨</h2>
-        <p className="mt-2 text-muted-foreground">Sua composição está pronta e foi adicionada ao álbum.</p>
+        <h2 className="font-display text-3xl sm:text-4xl font-bold">
+          {isVideo ? "Vídeo enviado! 🎬" : "Ficou incrível! ✨"}
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          {isVideo ? "Seu vídeo foi publicado no álbum do evento." : "Sua composição está pronta e foi adicionada ao álbum."}
+        </p>
       </div>
 
       <div className={`print-area print-${event.print_layout ?? "portrait"} card-soft p-3 bg-white`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo.url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
+        {isVideo ? (
+          <video src={photo.url} controls playsInline className="block w-full h-auto rounded-lg bg-black" />
+        ) : (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={photo.url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
+        )}
       </div>
 
       <div className="no-print mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Button onClick={print} className="rounded-full gap-2 h-14 text-base" size="lg">
-          <Printer className="size-5" /> Imprimir
-        </Button>
+        {!isVideo && (
+          <Button onClick={print} className="rounded-full gap-2 h-14 text-base" size="lg">
+            <Printer className="size-5" /> Imprimir
+          </Button>
+        )}
         <Button onClick={download} variant="outline" className="rounded-full gap-2 h-14 text-base" size="lg">
           <Download className="size-5" /> Baixar
         </Button>
         <Button onClick={onReset} variant="secondary" className="rounded-full gap-2 h-14 text-base" size="lg">
-          <RotateCcw className="size-5" /> Novas Fotos
+          <RotateCcw className="size-5" /> {isVideo ? "Nova mídia" : "Novas Fotos"}
         </Button>
       </div>
 
@@ -1264,7 +1276,7 @@ function DoneScreen({
           className="rounded-full gap-2 text-muted-foreground hover:text-destructive"
         >
           {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-          Excluir esta foto
+          Excluir esta mídia
         </Button>
       </div>
     </div>
