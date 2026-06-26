@@ -802,8 +802,10 @@ function UploadFlow({
     try {
       if (hasVideo) {
         const file = files[0];
-        const result = await uploadVideoAndInsert(file, event);
+        const { blob, ext } = await transcodeUploadedVideoWithOverlay(file, event);
+        const result = await uploadVideoAndInsert(blob, event, ext);
         onDone({ ...result, mediaType: "video" });
+
       } else {
         const shots = await Promise.all(files.map(readAsDataUrl));
         while (shots.length < event.photo_count) shots.push(shots[shots.length - 1]);
