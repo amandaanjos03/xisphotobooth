@@ -71,8 +71,9 @@ export const Route = createFileRoute("/event/$slug")({
   ),
 });
 
-type Phase = "welcome" | "capture" | "upload" | "composing" | "done";
+type Phase = "welcome" | "capture" | "upload" | "record-video" | "composing" | "done";
 type UploadSource = "camera" | "gallery";
+type MediaType = "image" | "video";
 
 const ACCESS_KEY_PREFIX = "xis:access:";
 
