@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventSlugRouteImport } from './routes/event.$slug'
+import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated.master'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as EventSlugGalleryRouteImport } from './routes/event.$slug.gallery'
 import { Route as AuthenticatedAdminEventSlugRouteImport } from './routes/_authenticated.admin.event.$slug'
@@ -42,6 +43,11 @@ const EventSlugRoute = EventSlugRouteImport.update({
   path: '/event/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedMasterRoute = AuthenticatedMasterRouteImport.update({
+  id: '/master',
+  path: '/master',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/master': typeof AuthenticatedMasterRoute
   '/event/$slug': typeof EventSlugRouteWithChildren
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
   '/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/master': typeof AuthenticatedMasterRoute
   '/event/$slug': typeof EventSlugRouteWithChildren
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
   '/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/master': typeof AuthenticatedMasterRoute
   '/event/$slug': typeof EventSlugRouteWithChildren
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
   '/_authenticated/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
+    | '/master'
     | '/event/$slug'
     | '/event/$slug/gallery'
     | '/admin/event/$slug'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
+    | '/master'
     | '/event/$slug'
     | '/event/$slug/gallery'
     | '/admin/event/$slug'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/admin'
+    | '/_authenticated/master'
     | '/event/$slug'
     | '/event/$slug/gallery'
     | '/_authenticated/admin/event/$slug'
@@ -164,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/master': {
+      id: '/_authenticated/master'
+      path: '/master'
+      fullPath: '/master'
+      preLoaderRoute: typeof AuthenticatedMasterRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -201,10 +220,12 @@ const AuthenticatedAdminRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedMasterRoute: typeof AuthenticatedMasterRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedMasterRoute: AuthenticatedMasterRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

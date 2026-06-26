@@ -15,7 +15,7 @@ import {
 import {
   Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
   ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
-  CopyPlus,
+  CopyPlus, Eye, ShieldCheck,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -44,6 +44,8 @@ type EventRow = {
   logo_position: LogoPosition;
   logo_size: number;
   requires_code: boolean;
+  view_count: number;
+  download_count: number;
 };
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
