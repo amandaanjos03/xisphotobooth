@@ -394,6 +394,7 @@ function AlbumGrid({ event }: { event: EventRow }) {
       for (let i = 0; i < photos.length; i++) {
         const ext = photos[i].media_type === "video" ? "mp4" : "jpg";
         await downloadPhoto(photos[i].photo_url, `${event.slug}-${i + 1}.${ext}`);
+        trackDownload(event.id);
         await new Promise((r) => setTimeout(r, 250));
       }
       toast.success("Download iniciado");
@@ -479,7 +480,7 @@ function AlbumGrid({ event }: { event: EventRow }) {
                   </button>
                 )}
                 <button
-                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.${ext}`)}
+                  onClick={() => { downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.${ext}`); trackDownload(event.id); }}
                   className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
                   aria-label="Baixar"
                   title="Baixar"
@@ -1390,6 +1391,7 @@ function DoneScreen({
     document.body.appendChild(a);
     a.click();
     a.remove();
+    trackDownload(event.id);
   }
   function print() { window.print(); }
 
