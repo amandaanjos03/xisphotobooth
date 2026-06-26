@@ -109,22 +109,31 @@ function AuthPage() {
           </TabsContent>
 
           <TabsContent value="signup">
-            <form onSubmit={signUp} className="space-y-4 mt-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email-up">E-mail</Label>
-                <Input id="email-up" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+            {!allowSignups ? (
+              <div className="mt-4 rounded-lg border border-dashed border-border p-6 text-center">
+                <p className="font-display text-lg font-bold">Cadastros fechados</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Novos cadastros estão desabilitados no momento. Solicite acesso ao administrador master.
+                </p>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="pw-up">Senha</Label>
-                <Input id="pw-up" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
-              </div>
-              <Button type="submit" disabled={busy} variant="secondary" className="w-full rounded-full">
-                {busy ? <Loader2 className="size-4 animate-spin" /> : "Criar conta"}
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Após confirmar seu e-mail, você terá acesso para criar seus próprios eventos.
-              </p>
-            </form>
+            ) : (
+              <form onSubmit={signUp} className="space-y-4 mt-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email-up">E-mail</Label>
+                  <Input id="email-up" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pw-up">Senha</Label>
+                  <Input id="pw-up" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
+                </div>
+                <Button type="submit" disabled={busy} variant="secondary" className="w-full rounded-full">
+                  {busy ? <Loader2 className="size-4 animate-spin" /> : "Criar conta"}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Após confirmar seu e-mail, você terá acesso para criar seus próprios eventos.
+                </p>
+              </form>
+            )}
           </TabsContent>
         </Tabs>
       </div>
