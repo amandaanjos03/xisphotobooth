@@ -275,6 +275,12 @@ function AdminDashboard() {
                       <Printer className="size-3.5" />
                       {PRINT_LAYOUT_LABEL[ev.print_layout ?? "portrait"]}
                     </span>
+                    <span className="inline-flex items-center gap-1" title="Acessos ao link do evento">
+                      <Eye className="size-3.5" /> {ev.view_count ?? 0}
+                    </span>
+                    <span className="inline-flex items-center gap-1" title="Downloads">
+                      <Download className="size-3.5" /> {ev.download_count ?? 0}
+                    </span>
                   </div>
                   {ev.description && (
                     <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{ev.description}</p>
