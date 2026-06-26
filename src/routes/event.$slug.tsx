@@ -1104,10 +1104,11 @@ function RecordVideoFlow({
     })();
     return () => {
       cancelled = true;
-      try { recorderRef.current?.state === "recording" && recorderRef.current?.stop(); } catch {}
+      try { stopFnRef.current?.(); } catch { /* ignore */ }
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
+
   }, [facing]);
 
   useEffect(() => {
