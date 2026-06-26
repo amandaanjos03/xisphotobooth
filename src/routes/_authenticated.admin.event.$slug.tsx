@@ -21,6 +21,7 @@ type PhotoRow = {
   photo_url: string;
   hidden: boolean;
   created_at: string;
+  media_type: "image" | "video";
 };
 
 export const Route = createFileRoute("/_authenticated/admin/event/$slug")({
