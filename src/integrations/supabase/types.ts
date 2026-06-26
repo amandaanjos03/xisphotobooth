@@ -22,6 +22,7 @@ export type Database = {
           created_at: string
           date: string | null
           description: string | null
+          download_count: number
           frame_url: string | null
           id: string
           logo_position: string
@@ -34,6 +35,7 @@ export type Database = {
           print_layout: string
           requires_code: boolean
           slug: string
+          view_count: number
         }
         Insert: {
           access_code?: string | null
@@ -42,6 +44,7 @@ export type Database = {
           created_at?: string
           date?: string | null
           description?: string | null
+          download_count?: number
           frame_url?: string | null
           id?: string
           logo_position?: string
@@ -54,6 +57,7 @@ export type Database = {
           print_layout?: string
           requires_code?: boolean
           slug: string
+          view_count?: number
         }
         Update: {
           access_code?: string | null
@@ -62,6 +66,7 @@ export type Database = {
           created_at?: string
           date?: string | null
           description?: string | null
+          download_count?: number
           frame_url?: string | null
           id?: string
           logo_position?: string
@@ -74,6 +79,7 @@ export type Database = {
           print_layout?: string
           requires_code?: boolean
           slug?: string
+          view_count?: number
         }
         Relationships: []
       }
@@ -112,20 +118,56 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          allow_signups: boolean
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          allow_signups?: boolean
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allow_signups?: boolean
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      super_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
+          blocked: boolean
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          blocked?: boolean
           created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          blocked?: boolean
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
@@ -147,10 +189,36 @@ export type Database = {
         Returns: boolean
       }
       hash_event_code: { Args: { _code: string }; Returns: string }
+      increment_event_download: {
+        Args: { _event_id: string }
+        Returns: undefined
+      }
+      increment_event_view: { Args: { _slug: string }; Returns: undefined }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_admin_users: {
+        Args: never
+        Returns: {
+          blocked: boolean
+          created_at: string
+          download_count: number
+          email: string
+          event_count: number
+          is_master: boolean
+          photo_count: number
+          user_id: string
+          view_count: number
+        }[]
+      }
+      set_admin_blocked: {
+        Args: { _blocked: boolean; _user_id: string }
+        Returns: undefined
+      }
+      set_allow_signups: { Args: { _allow: boolean }; Returns: undefined }
       verify_event_code: {
         Args: { _code: string; _slug: string }
         Returns: boolean
       }
+      wipe_event_photos: { Args: { _event_id: string }; Returns: number }
     }
     Enums: {
       app_role: "admin"

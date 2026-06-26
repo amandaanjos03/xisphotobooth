@@ -15,7 +15,7 @@ import {
 import {
   Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
   ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
-  CopyPlus,
+  CopyPlus, Eye, ShieldCheck,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -44,6 +44,8 @@ type EventRow = {
   logo_position: LogoPosition;
   logo_size: number;
   requires_code: boolean;
+  view_count: number;
+  download_count: number;
 };
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
@@ -78,6 +80,14 @@ function AdminDashboard() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as unknown as EventRow[];
+    },
+  });
+
+  const masterQ = useQuery({
+    queryKey: ["is_master", user.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("super_admins").select("user_id").eq("user_id", user.id).maybeSingle();
+      return !!data;
     },
   });
 
@@ -171,6 +181,11 @@ function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {masterQ.data && (
+              <Button asChild variant="secondary" size="sm" className="rounded-full gap-1.5">
+                <Link to="/master"><ShieldCheck className="size-4" /> Master</Link>
+              </Button>
+            )}
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <Button className="rounded-full gap-2">
@@ -200,6 +215,11 @@ function AdminDashboard() {
             Crie um evento, envie uma moldura e compartilhe o link com a senha para os convidados.
           </p>
         </div>
+
+        {eventsQ.data && eventsQ.data.length > 0 && (
+          <SummaryStats events={eventsQ.data} counts={countsQ.data ?? {}} />
+        )}
+
 
         {eventsQ.isLoading && (
           <div className="grid place-items-center py-20 text-muted-foreground">
@@ -254,6 +274,12 @@ function AdminDashboard() {
                     <span className="inline-flex items-center gap-1">
                       <Printer className="size-3.5" />
                       {PRINT_LAYOUT_LABEL[ev.print_layout ?? "portrait"]}
+                    </span>
+                    <span className="inline-flex items-center gap-1" title="Acessos ao link do evento">
+                      <Eye className="size-3.5" /> {ev.view_count ?? 0}
+                    </span>
+                    <span className="inline-flex items-center gap-1" title="Downloads">
+                      <Download className="size-3.5" /> {ev.download_count ?? 0}
                     </span>
                   </div>
                   {ev.description && (
@@ -964,5 +990,30 @@ function ShareDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SummaryStats({ events, counts }: { events: EventRow[]; counts: Record<string, number> }) {
+  const totalEvents = events.length;
+  const totalPhotos = events.reduce((s, e) => s + (counts[e.id] ?? 0), 0);
+  const totalViews = events.reduce((s, e) => s + (e.view_count ?? 0), 0);
+  const totalDownloads = events.reduce((s, e) => s + (e.download_count ?? 0), 0);
+  const cards = [
+    { label: "Eventos ativos", value: totalEvents, icon: Calendar },
+    { label: "Fotos & vídeos", value: totalPhotos, icon: ImageIcon },
+    { label: "Acessos aos links", value: totalViews, icon: Eye },
+    { label: "Downloads", value: totalDownloads, icon: Download },
+  ];
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      {cards.map((c) => (
+        <div key={c.label} className="card-soft p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
+            <c.icon className="size-4" /> {c.label}
+          </div>
+          <div className="font-display text-2xl font-bold mt-1">{c.value.toLocaleString("pt-BR")}</div>
+        </div>
+      ))}
+    </div>
   );
 }

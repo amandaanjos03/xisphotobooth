@@ -80,6 +80,16 @@ const ACCESS_KEY_PREFIX = "xis:access:";
 function BoothPage() {
   const { event } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
+
+  // Track guest link access once per session.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const key = `xis:view:${event.slug}`;
+    if (window.sessionStorage.getItem(key)) return;
+    window.sessionStorage.setItem(key, "1");
+    supabase.rpc("increment_event_view" as never, { _slug: event.slug } as never).then(() => {}, () => {});
+  }, [event.slug]);
+
   const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
   const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string; mediaType: MediaType } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
@@ -384,6 +394,7 @@ function AlbumGrid({ event }: { event: EventRow }) {
       for (let i = 0; i < photos.length; i++) {
         const ext = photos[i].media_type === "video" ? "mp4" : "jpg";
         await downloadPhoto(photos[i].photo_url, `${event.slug}-${i + 1}.${ext}`);
+        trackDownload(event.id);
         await new Promise((r) => setTimeout(r, 250));
       }
       toast.success("Download iniciado");
@@ -469,7 +480,7 @@ function AlbumGrid({ event }: { event: EventRow }) {
                   </button>
                 )}
                 <button
-                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.${ext}`)}
+                  onClick={() => { downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.${ext}`); trackDownload(event.id); }}
                   className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
                   aria-label="Baixar"
                   title="Baixar"
@@ -1359,6 +1370,10 @@ function loadImage(src: string, cors = false): Promise<HTMLImageElement> {
   });
 }
 
+function trackDownload(eventId: string) {
+  supabase.rpc("increment_event_download" as never, { _event_id: eventId } as never).then(() => {}, () => {});
+}
+
 function DoneScreen({
   event, photo, onReset,
 }: { event: EventRow; photo: { id: string; url: string; mediaType: MediaType }; onReset: () => void }) {
@@ -1376,6 +1391,7 @@ function DoneScreen({
     document.body.appendChild(a);
     a.click();
     a.remove();
+    trackDownload(event.id);
   }
   function print() { window.print(); }
 

@@ -25,12 +25,16 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [allowSignups, setAllowSignups] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) router.navigate({ to: "/admin", replace: true });
     });
+    supabase.from("platform_settings").select("allow_signups").eq("id", true).maybeSingle()
+      .then(({ data }) => { if (data) setAllowSignups((data as { allow_signups: boolean }).allow_signups); });
   }, [router]);
+
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +48,10 @@ function AuthPage() {
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
+    if (!allowSignups) {
+      toast.error("Cadastros estão fechados no momento. Solicite acesso ao administrador master.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -56,6 +64,7 @@ function AuthPage() {
       "Conta criada! Verifique seu e-mail para confirmar e ativar o acesso de administrador.",
     );
   }
+
 
   return (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
@@ -100,22 +109,31 @@ function AuthPage() {
           </TabsContent>
 
           <TabsContent value="signup">
-            <form onSubmit={signUp} className="space-y-4 mt-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email-up">E-mail</Label>
-                <Input id="email-up" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+            {!allowSignups ? (
+              <div className="mt-4 rounded-lg border border-dashed border-border p-6 text-center">
+                <p className="font-display text-lg font-bold">Cadastros fechados</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Novos cadastros estão desabilitados no momento. Solicite acesso ao administrador master.
+                </p>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="pw-up">Senha</Label>
-                <Input id="pw-up" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
-              </div>
-              <Button type="submit" disabled={busy} variant="secondary" className="w-full rounded-full">
-                {busy ? <Loader2 className="size-4 animate-spin" /> : "Criar conta"}
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Após confirmar seu e-mail, você terá acesso para criar seus próprios eventos.
-              </p>
-            </form>
+            ) : (
+              <form onSubmit={signUp} className="space-y-4 mt-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email-up">E-mail</Label>
+                  <Input id="email-up" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pw-up">Senha</Label>
+                  <Input id="pw-up" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" minLength={8} />
+                </div>
+                <Button type="submit" disabled={busy} variant="secondary" className="w-full rounded-full">
+                  {busy ? <Loader2 className="size-4 animate-spin" /> : "Criar conta"}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Após confirmar seu e-mail, você terá acesso para criar seus próprios eventos.
+                </p>
+              </form>
+            )}
           </TabsContent>
         </Tabs>
       </div>
