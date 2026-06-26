@@ -1124,48 +1124,49 @@ function RecordVideoFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recording]);
 
-  function pickMime(): string {
-    const candidates = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
-    for (const c of candidates) {
-      if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c)) return c;
-    }
-    return "";
-  }
-
-  function startRecording() {
-    if (!streamRef.current) return;
-    chunksRef.current = [];
-    const mime = pickMime();
+  async function startRecording() {
+    const stream = streamRef.current;
+    const sourceVideo = videoRef.current;
+    if (!stream || !sourceVideo) return;
     try {
-      const rec = new MediaRecorder(streamRef.current, mime ? { mimeType: mime } : undefined);
-      rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunksRef.current.push(e.data); };
-      rec.onstop = async () => {
-        const type = rec.mimeType || "video/webm";
-        const blob = new Blob(chunksRef.current, { type });
-        const ext = type.includes("mp4") ? "mp4" : "webm";
-        onUploading();
-        try {
-          const result = await uploadVideoAndInsert(blob, event, ext);
-          onDone({ ...result, mediaType: "video" });
-        } catch (e) {
-          toast.error((e as Error).message);
-          onCancel();
-        }
-      };
-      rec.start();
-      recorderRef.current = rec;
+      const overlay = await loadOverlay(event);
+      const audioTracks = stream.getAudioTracks();
       setElapsed(0);
       setRecording(true);
+      const recording$ = recordVideoWithOverlay(
+        sourceVideo,
+        audioTracks,
+        event,
+        overlay,
+        { onStop: (cb) => { stopFnRef.current = cb; } },
+      );
+      recording$
+        .then(async ({ blob, ext }) => {
+          onUploading();
+          try {
+            const result = await uploadVideoAndInsert(blob, event, ext);
+            onDone({ ...result, mediaType: "video" });
+          } catch (e) {
+            toast.error((e as Error).message);
+            onCancel();
+          }
+        })
+        .catch((e: Error) => {
+          toast.error(e.message);
+          setRecording(false);
+        });
     } catch (e) {
       toast.error((e as Error).message);
+      setRecording(false);
     }
   }
 
   function stopRecording() {
-    const rec = recorderRef.current;
-    if (rec && rec.state !== "inactive") rec.stop();
+    try { stopFnRef.current?.(); } catch { /* ignore */ }
+    stopFnRef.current = null;
     setRecording(false);
   }
+
 
   async function flipCamera() {
     if (recording) return;
