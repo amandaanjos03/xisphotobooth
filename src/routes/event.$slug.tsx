@@ -902,6 +902,163 @@ async function uploadVideoAndInsert(
   return { id: (data as { id: string }).id, url };
 }
 
+// ---- Video overlay helpers (frame/logo applied to videos) ----
+
+function pickVideoMime(): string {
+  const candidates = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+  for (const c of candidates) {
+    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c)) return c;
+  }
+  return "";
+}
+
+async function loadOverlay(event: EventRow): Promise<HTMLImageElement | null> {
+  try {
+    const overlayType = event.overlay_type ?? "frame";
+    if (overlayType === "frame" && event.frame_url) return await loadImage(event.frame_url, true);
+    if (overlayType === "logo" && event.logo_url) return await loadImage(event.logo_url, true);
+  } catch (e) {
+    console.warn("Overlay failed to load", e);
+  }
+  return null;
+}
+
+function drawVideoOverlay(
+  ctx: CanvasRenderingContext2D,
+  overlay: HTMLImageElement,
+  event: EventRow,
+  W: number,
+  H: number,
+) {
+  const overlayType = event.overlay_type ?? "frame";
+  if (overlayType === "frame") {
+    ctx.drawImage(overlay, 0, 0, W, H);
+    return;
+  }
+  const sizePct = Math.max(5, Math.min(80, event.logo_size ?? 25)) / 100;
+  const position: LogoPosition = event.logo_position ?? "bottom";
+  const horizontal = position === "top" || position === "bottom";
+  const ratio = overlay.width / overlay.height;
+  let finalW: number, finalH: number;
+  if (horizontal) {
+    finalH = H * sizePct;
+    finalW = finalH * ratio;
+  } else {
+    finalW = W * sizePct;
+    finalH = finalW / ratio;
+  }
+  const margin = Math.round(Math.min(W, H) * 0.03);
+  const maxW = W - margin * 2;
+  const maxH = H - margin * 2;
+  const scale = Math.min(1, maxW / finalW, maxH / finalH);
+  finalW *= scale; finalH *= scale;
+  let x = (W - finalW) / 2;
+  let y = (H - finalH) / 2;
+  if (position === "top") y = margin;
+  else if (position === "bottom") y = H - finalH - margin;
+  else if (position === "left") x = margin;
+  else if (position === "right") x = W - finalW - margin;
+  ctx.drawImage(overlay, x, y, finalW, finalH);
+}
+
+/**
+ * Records a source <video> element to a Blob, compositing the event's overlay
+ * (frame or logo) on top of each frame. Optionally mixes audio tracks.
+ */
+function recordVideoWithOverlay(
+  source: HTMLVideoElement,
+  audioTracks: MediaStreamTrack[],
+  event: EventRow,
+  overlay: HTMLImageElement | null,
+  controls: { onStop?: (cb: () => void) => void; stopOnEnded?: boolean },
+): Promise<{ blob: Blob; ext: "mp4" | "webm" }> {
+  return new Promise((resolve, reject) => {
+    const W = source.videoWidth || 1280;
+    const H = source.videoHeight || 720;
+    const canvas = document.createElement("canvas");
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext("2d")!;
+
+    let rafId = 0;
+    const draw = () => {
+      try {
+        ctx.drawImage(source, 0, 0, W, H);
+        if (overlay) drawVideoOverlay(ctx, overlay, event, W, H);
+      } catch { /* frame not ready */ }
+      rafId = requestAnimationFrame(draw);
+    };
+    draw();
+
+    const canvasStream = canvas.captureStream(30);
+    const outStream = new MediaStream();
+    canvasStream.getVideoTracks().forEach((t) => outStream.addTrack(t));
+    audioTracks.forEach((t) => outStream.addTrack(t));
+
+    const mime = pickVideoMime();
+    let rec: MediaRecorder;
+    try {
+      rec = new MediaRecorder(outStream, mime ? { mimeType: mime } : undefined);
+    } catch (e) {
+      cancelAnimationFrame(rafId);
+      reject(e as Error);
+      return;
+    }
+    const chunks: BlobPart[] = [];
+    rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+    rec.onstop = () => {
+      cancelAnimationFrame(rafId);
+      canvasStream.getTracks().forEach((t) => t.stop());
+      const type = rec.mimeType || "video/webm";
+      const ext: "mp4" | "webm" = type.includes("mp4") ? "mp4" : "webm";
+      resolve({ blob: new Blob(chunks, { type }), ext });
+    };
+    rec.onerror = (e) => reject(new Error((e as unknown as { error?: { message?: string } }).error?.message || "Erro ao gravar"));
+
+    const stop = () => { if (rec.state !== "inactive") rec.stop(); };
+    controls.onStop?.(stop);
+    if (controls.stopOnEnded) source.addEventListener("ended", stop, { once: true });
+
+    rec.start();
+  });
+}
+
+async function transcodeUploadedVideoWithOverlay(file: File, event: EventRow): Promise<{ blob: Blob; ext: "mp4" | "webm" }> {
+  const overlay = await loadOverlay(event);
+  if (!overlay) {
+    const ext: "mp4" | "webm" = file.type.includes("webm") ? "webm" : "mp4";
+    return { blob: file, ext };
+  }
+
+  const url = URL.createObjectURL(file);
+  const v = document.createElement("video");
+  v.src = url;
+  v.playsInline = true;
+  v.crossOrigin = "anonymous";
+  // Keep playback silent in UI but capture audio from the element.
+  v.volume = 0;
+
+  await new Promise<void>((resolve, reject) => {
+    v.onloadedmetadata = () => resolve();
+    v.onerror = () => reject(new Error("Não foi possível ler o vídeo enviado"));
+  });
+
+  let audioTracks: MediaStreamTrack[] = [];
+  try {
+    const stream = (v as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream?.();
+    if (stream) audioTracks = stream.getAudioTracks();
+  } catch { /* ignore */ }
+
+  await v.play();
+  try {
+    return await recordVideoWithOverlay(v, audioTracks, event, overlay, { stopOnEnded: true });
+  } finally {
+    try { v.pause(); } catch { /* ignore */ }
+    URL.revokeObjectURL(url);
+  }
+}
+
+
+
 function RecordVideoFlow({
   event, onDone, onCancel, onUploading,
 }: {
