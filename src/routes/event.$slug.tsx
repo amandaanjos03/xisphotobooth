@@ -81,7 +81,7 @@ function BoothPage() {
   const { event } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
   const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
-  const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string } | null>(null);
+  const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string; mediaType: MediaType } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
