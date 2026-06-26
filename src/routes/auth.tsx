@@ -25,12 +25,16 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [allowSignups, setAllowSignups] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) router.navigate({ to: "/admin", replace: true });
     });
+    supabase.from("platform_settings").select("allow_signups").eq("id", true).maybeSingle()
+      .then(({ data }) => { if (data) setAllowSignups((data as { allow_signups: boolean }).allow_signups); });
   }, [router]);
+
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +48,10 @@ function AuthPage() {
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
+    if (!allowSignups) {
+      toast.error("Cadastros estão fechados no momento. Solicite acesso ao administrador master.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -56,6 +64,7 @@ function AuthPage() {
       "Conta criada! Verifique seu e-mail para confirmar e ativar o acesso de administrador.",
     );
   }
+
 
   return (
     <div className="min-h-screen bg-blob grid place-items-center px-4">
