@@ -129,11 +129,11 @@ function AdminEventGallery() {
           .filter((x): x is string => !!x);
         if (paths.length) await supabase.storage.from("event-photos").remove(paths);
       } catch { /* ignore storage cleanup errors */ }
-      const { error } = await supabase.from("photos").delete().eq("event_id", event.id);
+      const { error } = await supabase.rpc("wipe_event_photos" as never, { _event_id: event.id } as never);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Todas as fotos foram excluídas");
+      toast.success("Álbum esvaziado");
       qc.invalidateQueries({ queryKey: ["photos", event.id, "admin"] });
       qc.invalidateQueries({ queryKey: ["photos", event.id, "all"] });
       qc.invalidateQueries({ queryKey: ["photo-counts"] });
@@ -169,17 +169,17 @@ function AdminEventGallery() {
             </Button>
             <Button
               size="sm"
-              variant="ghost"
-              className="rounded-full gap-1.5 text-muted-foreground hover:text-destructive"
+              variant="destructive"
+              className="rounded-full gap-1.5"
               disabled={photos.length === 0 || delAllPhotos.isPending}
               onClick={() => {
-                if (confirm(`Apagar TODAS as ${photos.length} fotos deste evento? Esta ação não pode ser desfeita.`)) {
+                if (confirm(`Tem certeza? Isso excluirá permanentemente todas as ${photos.length} mídias deste evento e liberará o espaço no armazenamento.`)) {
                   delAllPhotos.mutate(photos);
                 }
               }}
             >
               {delAllPhotos.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-              Apagar todas
+              Limpar Álbum
             </Button>
           </div>
         </div>
