@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   Camera, Printer, Download, RotateCcw, Loader2,
   ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
-  RefreshCw, Maximize2, Minimize2,
+  RefreshCw, Maximize2, Minimize2, Video, Square, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
