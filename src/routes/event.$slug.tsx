@@ -1071,8 +1071,8 @@ function RecordVideoFlow({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
+  const stopFnRef = useRef<(() => void) | null>(null);
+
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [facing, setFacing] = useState<"user" | "environment">("user");
