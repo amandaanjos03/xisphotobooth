@@ -154,12 +154,13 @@ function BoothPage() {
           event={event}
           onStart={() => setPhase("capture")}
           onUpload={(src) => { setUploadSource(src); setPhase("upload"); }}
+          onRecordVideo={() => setPhase("record-video")}
         />
       )}
       {phase === "capture" && (
         <CaptureFlow
           event={event}
-          onDone={(photo) => { setFinalPhoto(photo); setPhase("done"); }}
+          onDone={(photo) => { setFinalPhoto({ ...photo, mediaType: "image" }); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
         />
@@ -168,15 +169,23 @@ function BoothPage() {
         <UploadFlow
           event={event}
           source={uploadSource}
-          onDone={(photo) => { setFinalPhoto(photo); setPhase("done"); }}
+          onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
+        />
+      )}
+      {phase === "record-video" && (
+        <RecordVideoFlow
+          event={event}
+          onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
+          onCancel={reset}
+          onUploading={() => setPhase("composing")}
         />
       )}
       {phase === "composing" && (
         <div className="grid place-items-center py-32 text-muted-foreground">
           <Loader2 className="size-8 animate-spin" />
-          <p className="mt-4 font-display text-lg">Montando sua composição…</p>
+          <p className="mt-4 font-display text-lg">Enviando sua mídia…</p>
         </div>
       )}
       {phase === "done" && finalPhoto && (
