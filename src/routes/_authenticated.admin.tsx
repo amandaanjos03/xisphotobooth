@@ -181,6 +181,11 @@ function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {masterQ.data && (
+              <Button asChild variant="secondary" size="sm" className="rounded-full gap-1.5">
+                <Link to="/master"><ShieldCheck className="size-4" /> Master</Link>
+              </Button>
+            )}
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <Button className="rounded-full gap-2">
@@ -210,6 +215,11 @@ function AdminDashboard() {
             Crie um evento, envie uma moldura e compartilhe o link com a senha para os convidados.
           </p>
         </div>
+
+        {eventsQ.data && eventsQ.data.length > 0 && (
+          <SummaryStats events={eventsQ.data} counts={countsQ.data ?? {}} />
+        )}
+
 
         {eventsQ.isLoading && (
           <div className="grid place-items-center py-20 text-muted-foreground">
