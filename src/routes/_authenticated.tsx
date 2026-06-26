@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/re
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2, LogOut, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -15,31 +15,30 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthedLayout,
 });
 
+type Status = "loading" | "blocked" | "no-admin" | "ok";
+
 function AuthedLayout() {
   const { user } = Route.useRouteContext() as { user: { id: string; email?: string } };
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [status, setStatus] = useState<Status>("loading");
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Idempotent: grants admin role to a freshly confirmed user.
       try { await supabase.rpc("claim_admin_role" as never); } catch { /* ignore */ }
-
       const { data, error } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, blocked")
         .eq("user_id", user.id)
         .eq("role", "admin")
         .maybeSingle();
       if (cancelled) return;
-      setIsAdmin(!error && !!data);
+      if (error || !data) setStatus("no-admin");
+      else if ((data as { blocked?: boolean }).blocked) setStatus("blocked");
+      else setStatus("ok");
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user.id]);
-
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -47,7 +46,7 @@ function AuthedLayout() {
     router.navigate({ to: "/auth", replace: true });
   }
 
-  if (isAdmin === null) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen grid place-items-center bg-blob">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -55,7 +54,28 @@ function AuthedLayout() {
     );
   }
 
-  if (!isAdmin) {
+  if (status === "blocked") {
+    return (
+      <div className="min-h-screen bg-blob grid place-items-center px-4">
+        <div className="card-soft p-8 max-w-md text-center">
+          <div className="mx-auto mb-3 size-12 rounded-full bg-destructive/10 grid place-items-center">
+            <ShieldAlert className="size-6 text-destructive" />
+          </div>
+          <h1 className="font-display text-2xl font-bold">Conta suspensa</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sua conta foi bloqueada por um administrador master. Entre em contato com o suporte.
+          </p>
+          <div className="mt-6 flex gap-2 justify-center">
+            <Button onClick={signOut} className="rounded-full gap-1.5">
+              <LogOut className="size-4" /> Sair
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "no-admin") {
     return (
       <div className="min-h-screen bg-blob grid place-items-center px-4">
         <div className="card-soft p-8 max-w-md text-center">
