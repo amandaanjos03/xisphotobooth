@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   Camera, Printer, Download, RotateCcw, Loader2,
   ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
-  RefreshCw, Maximize2, Minimize2,
+  RefreshCw, Maximize2, Minimize2, Video, Square, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
@@ -71,8 +71,9 @@ export const Route = createFileRoute("/event/$slug")({
   ),
 });
 
-type Phase = "welcome" | "capture" | "upload" | "composing" | "done";
+type Phase = "welcome" | "capture" | "upload" | "record-video" | "composing" | "done";
 type UploadSource = "camera" | "gallery";
+type MediaType = "image" | "video";
 
 const ACCESS_KEY_PREFIX = "xis:access:";
 
@@ -80,7 +81,7 @@ function BoothPage() {
   const { event } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
   const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
-  const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string } | null>(null);
+  const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string; mediaType: MediaType } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -153,12 +154,13 @@ function BoothPage() {
           event={event}
           onStart={() => setPhase("capture")}
           onUpload={(src) => { setUploadSource(src); setPhase("upload"); }}
+          onRecordVideo={() => setPhase("record-video")}
         />
       )}
       {phase === "capture" && (
         <CaptureFlow
           event={event}
-          onDone={(photo) => { setFinalPhoto(photo); setPhase("done"); }}
+          onDone={(photo) => { setFinalPhoto({ ...photo, mediaType: "image" }); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
         />
@@ -167,15 +169,23 @@ function BoothPage() {
         <UploadFlow
           event={event}
           source={uploadSource}
-          onDone={(photo) => { setFinalPhoto(photo); setPhase("done"); }}
+          onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
+        />
+      )}
+      {phase === "record-video" && (
+        <RecordVideoFlow
+          event={event}
+          onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
+          onCancel={reset}
+          onUploading={() => setPhase("composing")}
         />
       )}
       {phase === "composing" && (
         <div className="grid place-items-center py-32 text-muted-foreground">
           <Loader2 className="size-8 animate-spin" />
-          <p className="mt-4 font-display text-lg">Montando sua composição…</p>
+          <p className="mt-4 font-display text-lg">Enviando sua mídia…</p>
         </div>
       )}
       {phase === "done" && finalPhoto && (
@@ -282,8 +292,8 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
 }
 
 function Welcome({
-  event, onStart, onUpload,
-}: { event: EventRow; onStart: () => void; onUpload: (src: UploadSource) => void }) {
+  event, onStart, onUpload, onRecordVideo,
+}: { event: EventRow; onStart: () => void; onUpload: (src: UploadSource) => void; onRecordVideo: () => void }) {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-20 text-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
@@ -301,7 +311,7 @@ function Welcome({
         </p>
       ) : (
         <p className="mx-auto mt-6 max-w-md text-muted-foreground">
-          Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
+          Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Você também pode gravar um vídeo curto ou enviar mídias do seu dispositivo.
         </p>
       )}
       <div className="mt-10 flex flex-col items-center justify-center gap-3">
@@ -314,10 +324,16 @@ function Welcome({
         </button>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
           <button
+            onClick={onRecordVideo}
+            className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
+          >
+            <Video className="size-4" /> Gravar Vídeo
+          </button>
+          <button
             onClick={() => onUpload("gallery")}
             className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
           >
-            <Upload className="size-4" /> Enviar Foto
+            <Upload className="size-4" /> Enviar Foto ou Vídeo
           </button>
         </div>
       </div>
@@ -329,7 +345,7 @@ function Welcome({
 function AlbumGrid({ event }: { event: EventRow }) {
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(0);
-  const [viewing, setViewing] = useState<{ id: string; photo_url: string } | null>(null);
+  const [viewing, setViewing] = useState<{ id: string; photo_url: string; media_type: MediaType } | null>(null);
   const [downloading, setDownloading] = useState(false);
 
   const q = useQuery({
@@ -337,12 +353,12 @@ function AlbumGrid({ event }: { event: EventRow }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("photos")
-        .select("id, photo_url")
+        .select("id, photo_url, media_type")
         .eq("event_id", event.id)
         .eq("hidden", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as { id: string; photo_url: string }[];
+      return data as { id: string; photo_url: string; media_type: MediaType }[];
     },
     refetchOnWindowFocus: false,
   });
@@ -366,7 +382,8 @@ function AlbumGrid({ event }: { event: EventRow }) {
     setDownloading(true);
     try {
       for (let i = 0; i < photos.length; i++) {
-        await downloadPhoto(photos[i].photo_url, `${event.slug}-${i + 1}.jpg`);
+        const ext = photos[i].media_type === "video" ? "mp4" : "jpg";
+        await downloadPhoto(photos[i].photo_url, `${event.slug}-${i + 1}.${ext}`);
         await new Promise((r) => setTimeout(r, 250));
       }
       toast.success("Download iniciado");
@@ -383,7 +400,7 @@ function AlbumGrid({ event }: { event: EventRow }) {
         <div>
           <h2 className="font-display text-2xl sm:text-3xl font-bold">Álbum do evento</h2>
           <p className="text-sm text-muted-foreground">
-            {photos.length} foto{photos.length === 1 ? "" : "s"} • Página {safePage + 1} de {totalPages}
+            {photos.length} item{photos.length === 1 ? "" : "s"} • Página {safePage + 1} de {totalPages}
           </p>
         </div>
         <Button
@@ -393,42 +410,66 @@ function AlbumGrid({ event }: { event: EventRow }) {
           variant="secondary"
         >
           {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-          Baixar todas as imagens
+          Baixar todas as mídias
         </Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {slice.map((p, i) => {
           const absoluteIndex = safePage * PAGE_SIZE + i + 1;
+          const isVideo = p.media_type === "video";
+          const ext = isVideo ? "mp4" : "jpg";
           return (
             <div
               key={p.id}
               className="group relative aspect-square overflow-hidden rounded-xl bg-muted card-soft"
             >
               <button
-                onClick={() => setViewing(p)}
+                onClick={() => {
+                  if (isVideo) window.open(p.photo_url, "_blank", "noopener");
+                  else setViewing(p);
+                }}
                 className="absolute inset-0 transition active:scale-95"
-                aria-label={`Ver foto ${absoluteIndex}`}
+                aria-label={`Ver mídia ${absoluteIndex}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={p.photo_url}
-                  alt=""
-                  loading="lazy"
-                  className="size-full object-cover transition-transform group-hover:scale-105"
-                />
+                {isVideo ? (
+                  <>
+                    <video
+                      src={p.photo_url}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      className="size-full object-cover"
+                    />
+                    <div className="absolute inset-0 grid place-items-center bg-black/30">
+                      <div className="size-12 rounded-full bg-white/90 grid place-items-center">
+                        <Play className="size-5 text-foreground" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={p.photo_url}
+                    alt=""
+                    loading="lazy"
+                    className="size-full object-cover transition-transform group-hover:scale-105"
+                  />
+                )}
               </button>
               <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition">
+                {!isVideo && (
+                  <button
+                    onClick={() => printPhoto(p.photo_url)}
+                    className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
+                    aria-label="Imprimir"
+                    title="Imprimir"
+                  >
+                    <Printer className="size-4" />
+                  </button>
+                )}
                 <button
-                  onClick={() => printPhoto(p.photo_url)}
-                  className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
-                  aria-label="Imprimir"
-                  title="Imprimir"
-                >
-                  <Printer className="size-4" />
-                </button>
-                <button
-                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.jpg`)}
+                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.${ext}`)}
                   className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
                   aria-label="Baixar"
                   title="Baixar"
@@ -699,13 +740,13 @@ function UploadFlow({
 }: {
   event: EventRow;
   source: UploadSource;
-  onDone: (photo: { id: string; url: string }) => void;
+  onDone: (item: { id: string; url: string; mediaType: MediaType }) => void;
   onCancel: () => void;
   onComposing: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<{ url: string; isVideo: boolean }[]>([]);
   const [busy, setBusy] = useState(false);
 
   // Open picker right away so guests don't see an empty intermediate screen.
@@ -715,21 +756,27 @@ function UploadFlow({
 
   useEffect(() => {
     if (files.length === 0) { setPreviews([]); return; }
-    const urls = files.map((f) => URL.createObjectURL(f));
-    setPreviews(urls);
-    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+    const items = files.map((f) => ({ url: URL.createObjectURL(f), isVideo: f.type.startsWith("video/") }));
+    setPreviews(items);
+    return () => items.forEach((p) => URL.revokeObjectURL(p.url));
   }, [files]);
+
+  const hasVideo = files.some((f) => f.type.startsWith("video/"));
 
   function handleFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
-    const arr = Array.from(list)
-      .filter((f) => f.type.startsWith("image/"))
-      .slice(0, event.photo_count);
-    setFiles(arr);
+    const arr = Array.from(list).filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
+    if (arr.length === 0) return;
+    // If a video is selected, only keep one file (videos uploaded as-is)
+    const video = arr.find((f) => f.type.startsWith("video/"));
+    if (video) {
+      setFiles([video]);
+    } else {
+      setFiles(arr.slice(0, event.photo_count));
+    }
   }
 
   async function readAsDataUrl(file: File): Promise<string> {
-    // Re-encode to JPEG via canvas to normalize EXIF orientation issues
     const url = URL.createObjectURL(file);
     try {
       const img = await loadImage(url);
@@ -749,15 +796,20 @@ function UploadFlow({
   }
 
   async function submit() {
-    if (files.length === 0) return toast.error("Selecione ao menos uma foto");
+    if (files.length === 0) return toast.error("Selecione ao menos uma mídia");
     setBusy(true);
     onComposing();
     try {
-      const shots = await Promise.all(files.map(readAsDataUrl));
-      // Pad with last shot if user selected fewer than event.photo_count
-      while (shots.length < event.photo_count) shots.push(shots[shots.length - 1]);
-      const photo = await finalizeAndUpload(shots, event, event.photo_count);
-      onDone(photo);
+      if (hasVideo) {
+        const file = files[0];
+        const result = await uploadVideoAndInsert(file, event);
+        onDone({ ...result, mediaType: "video" });
+      } else {
+        const shots = await Promise.all(files.map(readAsDataUrl));
+        while (shots.length < event.photo_count) shots.push(shots[shots.length - 1]);
+        const photo = await finalizeAndUpload(shots, event, event.photo_count);
+        onDone({ ...photo, mediaType: "image" });
+      }
     } catch (e) {
       toast.error((e as Error).message);
       onCancel();
@@ -771,7 +823,7 @@ function UploadFlow({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple={event.photo_count > 1}
         {...(source === "camera" ? { capture: "environment" as const } : {})}
         className="hidden"
@@ -784,11 +836,9 @@ function UploadFlow({
             <Upload className="size-6 text-accent-foreground" />
           </div>
           <div>
-            <h2 className="font-display text-2xl font-bold leading-tight">Enviar foto</h2>
+            <h2 className="font-display text-2xl font-bold leading-tight">Enviar foto ou vídeo</h2>
             <p className="text-sm text-muted-foreground">
-              Selecione {event.photo_count === 1
-                ? "uma foto"
-                : `até ${event.photo_count} fotos`} — vamos aplicar a moldura do evento e adicionar ao álbum.
+              Escolha imagens (até {event.photo_count}) para aplicar a moldura do evento, ou um vídeo que será publicado como está no álbum.
             </p>
           </div>
         </div>
@@ -797,8 +847,12 @@ function UploadFlow({
           <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
             {previews.map((p, i) => (
               <div key={i} className="aspect-[3/4] rounded-lg overflow-hidden bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p} alt={`Foto ${i + 1}`} className="size-full object-cover" />
+                {p.isVideo ? (
+                  <video src={p.url} className="size-full object-cover" muted playsInline />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={p.url} alt={`Mídia ${i + 1}`} className="size-full object-cover" />
+                )}
               </div>
             ))}
           </div>
@@ -812,7 +866,7 @@ function UploadFlow({
             onClick={() => inputRef.current?.click()}
           >
             <Upload className="size-4" />
-            {previews.length === 0 ? "Escolher fotos" : "Trocar seleção"}
+            {previews.length === 0 ? "Escolher arquivo" : "Trocar seleção"}
           </Button>
           <Button
             type="button"
@@ -825,6 +879,198 @@ function UploadFlow({
           <Button type="button" variant="ghost" onClick={onCancel} className="rounded-full ml-auto">
             Cancelar
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function uploadVideoAndInsert(
+  file: Blob,
+  event: EventRow,
+  ext?: string,
+): Promise<{ id: string; url: string }> {
+  const fileExt = ext ?? (file.type.includes("webm") ? "webm" : "mp4");
+  const path = `${event.slug}/${Date.now()}.${fileExt}`;
+  const url = await uploadAndSign("event-photos", path, file, file.type || "video/mp4");
+  const { data, error } = await supabase
+    .from("photos")
+    .insert({ event_id: event.id, photo_url: url, media_type: "video" } as never)
+    .select("id")
+    .single();
+  if (error) throw error;
+  return { id: (data as { id: string }).id, url };
+}
+
+function RecordVideoFlow({
+  event, onDone, onCancel, onUploading,
+}: {
+  event: EventRow;
+  onDone: (item: { id: string; url: string; mediaType: MediaType }) => void;
+  onCancel: () => void;
+  onUploading: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+  const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const MAX_SECONDS = 30;
+
+  useEffect(() => {
+    let cancelled = false;
+    setReady(false);
+    (async () => {
+      try {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true,
+        });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+        }
+        setReady(true);
+      } catch (e) {
+        setError((e as Error).message || "Acesso à câmera negado");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      try { recorderRef.current?.state === "recording" && recorderRef.current?.stop(); } catch {}
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [facing]);
+
+  useEffect(() => {
+    if (!recording) return;
+    const t = setInterval(() => {
+      setElapsed((e) => {
+        const next = e + 1;
+        if (next >= MAX_SECONDS) stopRecording();
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recording]);
+
+  function pickMime(): string {
+    const candidates = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+    for (const c of candidates) {
+      if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c)) return c;
+    }
+    return "";
+  }
+
+  function startRecording() {
+    if (!streamRef.current) return;
+    chunksRef.current = [];
+    const mime = pickMime();
+    try {
+      const rec = new MediaRecorder(streamRef.current, mime ? { mimeType: mime } : undefined);
+      rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        const type = rec.mimeType || "video/webm";
+        const blob = new Blob(chunksRef.current, { type });
+        const ext = type.includes("mp4") ? "mp4" : "webm";
+        onUploading();
+        try {
+          const result = await uploadVideoAndInsert(blob, event, ext);
+          onDone({ ...result, mediaType: "video" });
+        } catch (e) {
+          toast.error((e as Error).message);
+          onCancel();
+        }
+      };
+      rec.start();
+      recorderRef.current = rec;
+      setElapsed(0);
+      setRecording(true);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  function stopRecording() {
+    const rec = recorderRef.current;
+    if (rec && rec.state !== "inactive") rec.stop();
+    setRecording(false);
+  }
+
+  async function flipCamera() {
+    if (recording) return;
+    setFacing((f) => (f === "user" ? "environment" : "user"));
+  }
+
+  const mirror = facing === "user";
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-20 text-center">
+        <div className="card-soft p-8">
+          <h2 className="font-display text-2xl font-bold">Câmera indisponível</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+          <p className="mt-2 text-sm text-muted-foreground">Permita o acesso à câmera e ao microfone para gravar vídeos.</p>
+          <Button onClick={onCancel} className="mt-6 rounded-full">Voltar</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-10">
+      <div className="card-soft overflow-hidden relative aspect-[3/4] sm:aspect-video bg-black">
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          className={`absolute inset-0 size-full object-cover bg-black ${mirror ? "[transform:scaleX(-1)]" : ""}`}
+        />
+        <button
+          type="button"
+          onClick={flipCamera}
+          disabled={recording}
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur px-3 py-2 text-white text-sm hover:bg-black/70 transition disabled:opacity-50"
+          title="Alternar câmera"
+        >
+          <RefreshCw className="size-4" />
+          <span className="hidden sm:inline">Alternar câmera</span>
+        </button>
+        {recording && (
+          <div className="absolute top-3 left-3 inline-flex items-center gap-2 rounded-full bg-red-600 px-3 py-1.5 text-white text-sm font-semibold">
+            <span className="size-2 rounded-full bg-white animate-pulse" />
+            REC {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")} / 0:{MAX_SECONDS}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <div className="text-sm text-muted-foreground">
+          {ready ? (recording ? "Gravando…" : "Pronto para gravar (até 30s)") : "Iniciando câmera…"}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={onCancel} className="rounded-full" disabled={recording}>
+            Cancelar
+          </Button>
+          {!recording ? (
+            <Button onClick={startRecording} disabled={!ready} className="rounded-full gap-2 bg-red-600 hover:bg-red-600/90">
+              <Video className="size-4" /> Iniciar gravação
+            </Button>
+          ) : (
+            <Button onClick={stopRecording} className="rounded-full gap-2">
+              <Square className="size-4" /> Parar e enviar
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -954,14 +1200,16 @@ function loadImage(src: string, cors = false): Promise<HTMLImageElement> {
 
 function DoneScreen({
   event, photo, onReset,
-}: { event: EventRow; photo: { id: string; url: string }; onReset: () => void }) {
+}: { event: EventRow; photo: { id: string; url: string; mediaType: MediaType }; onReset: () => void }) {
   const qc = useQueryClient();
   const [deleting, setDeleting] = useState(false);
+  const isVideo = photo.mediaType === "video";
 
   function download() {
+    const ext = isVideo ? (photo.url.includes(".webm") ? "webm" : "mp4") : "jpg";
     const a = document.createElement("a");
     a.href = photo.url;
-    a.download = `${event.slug}-${Date.now()}.jpg`;
+    a.download = `${event.slug}-${Date.now()}.${ext}`;
     a.target = "_blank";
     a.rel = "noopener";
     document.body.appendChild(a);
@@ -971,12 +1219,12 @@ function DoneScreen({
   function print() { window.print(); }
 
   async function deleteSelf() {
-    if (!confirm("Excluir esta foto que você acabou de tirar? Essa ação não pode ser desfeita.")) return;
+    if (!confirm("Excluir esta mídia que você acabou de enviar? Essa ação não pode ser desfeita.")) return;
     setDeleting(true);
     try {
       const { error } = await supabase.from("photos").delete().eq("id", photo.id);
       if (error) throw error;
-      toast.success("Foto removida");
+      toast.success("Mídia removida");
       qc.invalidateQueries({ queryKey: ["photos", event.id, "all"] });
       onReset();
     } catch (e) {
@@ -989,24 +1237,34 @@ function DoneScreen({
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
       <div className="no-print text-center mb-6">
-        <h2 className="font-display text-3xl sm:text-4xl font-bold">Ficou incrível! ✨</h2>
-        <p className="mt-2 text-muted-foreground">Sua composição está pronta e foi adicionada ao álbum.</p>
+        <h2 className="font-display text-3xl sm:text-4xl font-bold">
+          {isVideo ? "Vídeo enviado! 🎬" : "Ficou incrível! ✨"}
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          {isVideo ? "Seu vídeo foi publicado no álbum do evento." : "Sua composição está pronta e foi adicionada ao álbum."}
+        </p>
       </div>
 
       <div className={`print-area print-${event.print_layout ?? "portrait"} card-soft p-3 bg-white`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo.url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
+        {isVideo ? (
+          <video src={photo.url} controls playsInline className="block w-full h-auto rounded-lg bg-black" />
+        ) : (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={photo.url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
+        )}
       </div>
 
       <div className="no-print mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Button onClick={print} className="rounded-full gap-2 h-14 text-base" size="lg">
-          <Printer className="size-5" /> Imprimir
-        </Button>
+        {!isVideo && (
+          <Button onClick={print} className="rounded-full gap-2 h-14 text-base" size="lg">
+            <Printer className="size-5" /> Imprimir
+          </Button>
+        )}
         <Button onClick={download} variant="outline" className="rounded-full gap-2 h-14 text-base" size="lg">
           <Download className="size-5" /> Baixar
         </Button>
         <Button onClick={onReset} variant="secondary" className="rounded-full gap-2 h-14 text-base" size="lg">
-          <RotateCcw className="size-5" /> Novas Fotos
+          <RotateCcw className="size-5" /> {isVideo ? "Nova mídia" : "Novas Fotos"}
         </Button>
       </div>
 
@@ -1018,7 +1276,7 @@ function DoneScreen({
           className="rounded-full gap-2 text-muted-foreground hover:text-destructive"
         >
           {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-          Excluir esta foto
+          Excluir esta mídia
         </Button>
       </div>
     </div>

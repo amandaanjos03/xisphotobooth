@@ -21,6 +21,7 @@ type PhotoRow = {
   photo_url: string;
   hidden: boolean;
   created_at: string;
+  media_type: "image" | "video";
 };
 
 export const Route = createFileRoute("/_authenticated/admin/event/$slug")({
@@ -209,18 +210,28 @@ function AdminEventGallery() {
         )}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {photos.map((p, i) => (
+          {photos.map((p, i) => {
+            const isVideo = p.media_type === "video";
+            const ext = isVideo ? (p.photo_url.includes(".webm") ? "webm" : "mp4") : "jpg";
+            return (
             <article key={p.id} className="card-soft overflow-hidden flex flex-col">
               <button
                 type="button"
-                onClick={() => setViewing(p)}
+                onClick={() => {
+                  if (isVideo) window.open(p.photo_url, "_blank", "noopener");
+                  else setViewing(p);
+                }}
                 className={`relative aspect-square bg-muted w-full text-left transition active:scale-[0.99] ${p.hidden ? "opacity-50" : ""}`}
-                title="Ampliar"
+                title={isVideo ? "Abrir vídeo" : "Ampliar"}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.photo_url} alt="" className="absolute inset-0 size-full object-cover" />
-                <span className="absolute top-2 right-2 rounded-full bg-background/80 backdrop-blur p-1.5">
-                  <Maximize2 className="size-3.5" />
+                {isVideo ? (
+                  <video src={p.photo_url} muted playsInline preload="metadata" className="absolute inset-0 size-full object-cover" />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={p.photo_url} alt="" className="absolute inset-0 size-full object-cover" />
+                )}
+                <span className="absolute top-2 right-2 rounded-full bg-background/80 backdrop-blur px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
+                  {isVideo ? "Vídeo" : "Foto"}
                 </span>
                 {p.hidden && (
                   <div className="absolute top-2 left-2 rounded-full bg-background/90 backdrop-blur px-2.5 py-1 text-xs font-semibold inline-flex items-center gap-1">
@@ -246,7 +257,7 @@ function AdminEventGallery() {
                   variant="ghost"
                   className="rounded-full size-9"
                   title="Baixar"
-                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${i + 1}.jpg`)}
+                  onClick={() => downloadPhoto(p.photo_url, `${event.slug}-${i + 1}.${ext}`)}
                 >
                   <Download className="size-4" />
                 </Button>
@@ -256,14 +267,15 @@ function AdminEventGallery() {
                   className="rounded-full size-9 text-muted-foreground hover:text-destructive"
                   title="Excluir"
                   onClick={() => {
-                    if (confirm("Excluir esta foto permanentemente?")) delPhoto.mutate(p);
+                    if (confirm("Excluir esta mídia permanentemente?")) delPhoto.mutate(p);
                   }}
                 >
                   <Trash2 className="size-4" />
                 </Button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       </main>
       <PhotoViewer
