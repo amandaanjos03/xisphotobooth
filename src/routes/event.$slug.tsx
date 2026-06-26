@@ -292,8 +292,8 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
 }
 
 function Welcome({
-  event, onStart, onUpload,
-}: { event: EventRow; onStart: () => void; onUpload: (src: UploadSource) => void }) {
+  event, onStart, onUpload, onRecordVideo,
+}: { event: EventRow; onStart: () => void; onUpload: (src: UploadSource) => void; onRecordVideo: () => void }) {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-20 text-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
@@ -311,7 +311,7 @@ function Welcome({
         </p>
       ) : (
         <p className="mx-auto mt-6 max-w-md text-muted-foreground">
-          Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Ou envie uma foto sua do celular.
+          Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Você também pode gravar um vídeo curto ou enviar mídias do seu dispositivo.
         </p>
       )}
       <div className="mt-10 flex flex-col items-center justify-center gap-3">
@@ -324,10 +324,16 @@ function Welcome({
         </button>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
           <button
+            onClick={onRecordVideo}
+            className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
+          >
+            <Video className="size-4" /> Gravar Vídeo
+          </button>
+          <button
             onClick={() => onUpload("gallery")}
             className="inline-flex items-center gap-2 rounded-full bg-secondary px-6 py-3 text-base font-semibold text-secondary-foreground border border-border transition active:scale-95 hover:bg-accent"
           >
-            <Upload className="size-4" /> Enviar Foto
+            <Upload className="size-4" /> Enviar Foto ou Vídeo
           </button>
         </div>
       </div>
