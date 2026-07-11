@@ -783,7 +783,7 @@ function UploadFlow({
     if (video) {
       setFiles([video]);
     } else {
-      setFiles(arr.slice(0, event.photo_count));
+      setFiles(arr);
     }
   }
 
@@ -816,12 +816,23 @@ function UploadFlow({
         const { blob, ext } = await transcodeUploadedVideoWithOverlay(file, event);
         const result = await uploadVideoAndInsert(blob, event, ext);
         onDone({ ...result, mediaType: "video" });
-
       } else {
-        const shots = await Promise.all(files.map(readAsDataUrl));
-        while (shots.length < event.photo_count) shots.push(shots[shots.length - 1]);
-        const photo = await finalizeAndUpload(shots, event, event.photo_count);
-        onDone({ ...photo, mediaType: "image" });
+        // Batch: cada imagem vira uma foto individual com a moldura/logo aplicada
+        let last: { id: string; url: string } | null = null;
+        let ok = 0;
+        for (const file of files) {
+          try {
+            const dataUrl = await readAsDataUrl(file);
+            const photo = await finalizeAndUpload([dataUrl], event, 1);
+            last = photo;
+            ok++;
+          } catch (err) {
+            console.error("upload falhou", err);
+          }
+        }
+        if (!last) throw new Error("Nenhuma foto foi enviada");
+        if (files.length > 1) toast.success(`${ok} de ${files.length} fotos enviadas`);
+        onDone({ ...last, mediaType: "image" });
       }
     } catch (e) {
       toast.error((e as Error).message);
@@ -837,7 +848,7 @@ function UploadFlow({
         ref={inputRef}
         type="file"
         accept="image/*,video/*"
-        multiple={event.photo_count > 1}
+        multiple
         {...(source === "camera" ? { capture: "environment" as const } : {})}
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
@@ -851,7 +862,7 @@ function UploadFlow({
           <div>
             <h2 className="font-display text-2xl font-bold leading-tight">Enviar foto ou vídeo</h2>
             <p className="text-sm text-muted-foreground">
-              Escolha imagens (até {event.photo_count}) para aplicar a moldura do evento, ou um vídeo que será publicado como está no álbum.
+              Selecione quantas fotos quiser — cada uma será enviada ao álbum com a moldura do evento aplicada. Vídeos também são aceitos (um por vez).
             </p>
           </div>
         </div>
