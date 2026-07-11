@@ -848,7 +848,7 @@ function UploadFlow({
         ref={inputRef}
         type="file"
         accept="image/*,video/*"
-        multiple={event.photo_count > 1}
+        multiple
         {...(source === "camera" ? { capture: "environment" as const } : {})}
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
