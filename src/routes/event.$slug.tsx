@@ -816,12 +816,23 @@ function UploadFlow({
         const { blob, ext } = await transcodeUploadedVideoWithOverlay(file, event);
         const result = await uploadVideoAndInsert(blob, event, ext);
         onDone({ ...result, mediaType: "video" });
-
       } else {
-        const shots = await Promise.all(files.map(readAsDataUrl));
-        while (shots.length < event.photo_count) shots.push(shots[shots.length - 1]);
-        const photo = await finalizeAndUpload(shots, event, event.photo_count);
-        onDone({ ...photo, mediaType: "image" });
+        // Batch: cada imagem vira uma foto individual com a moldura/logo aplicada
+        let last: { id: string; url: string } | null = null;
+        let ok = 0;
+        for (const file of files) {
+          try {
+            const dataUrl = await readAsDataUrl(file);
+            const photo = await finalizeAndUpload([dataUrl], event, 1);
+            last = photo;
+            ok++;
+          } catch (err) {
+            console.error("upload falhou", err);
+          }
+        }
+        if (!last) throw new Error("Nenhuma foto foi enviada");
+        if (files.length > 1) toast.success(`${ok} de ${files.length} fotos enviadas`);
+        onDone({ ...last, mediaType: "image" });
       }
     } catch (e) {
       toast.error((e as Error).message);
