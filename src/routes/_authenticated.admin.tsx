@@ -916,7 +916,7 @@ function ShareDialog({
   const url = event && typeof window !== "undefined"
     ? `${window.location.origin}/event/${event.slug}`
     : "";
-  const codeToShow = accessCode ?? event?.access_code ?? null;
+  const codeToShow = accessCode ?? eventAccessCode(event) ?? null;
 
   useEffect(() => {
     if (!event || !url) return;
