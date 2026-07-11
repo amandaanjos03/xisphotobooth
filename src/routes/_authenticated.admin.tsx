@@ -74,7 +74,7 @@ function AdminDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("*")
+        .select("*, event_secrets(access_code)")
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
