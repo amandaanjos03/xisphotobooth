@@ -862,7 +862,7 @@ function UploadFlow({
           <div>
             <h2 className="font-display text-2xl font-bold leading-tight">Enviar foto ou vídeo</h2>
             <p className="text-sm text-muted-foreground">
-              Escolha imagens (até {event.photo_count}) para aplicar a moldura do evento, ou um vídeo que será publicado como está no álbum.
+              Selecione quantas fotos quiser — cada uma será enviada ao álbum com a moldura do evento aplicada. Vídeos também são aceitos (um por vez).
             </p>
           </div>
         </div>
