@@ -790,7 +790,9 @@ function EditEventDialog({
     if (!event) return;
     if (!confirm("Gerar uma nova senha para este evento? A anterior deixará de funcionar.")) return;
     const newCode = generateAccessCode();
-    const { error } = await supabase.from("events").update({ access_code: newCode } as never).eq("id", event.id);
+    const { error } = await supabase
+      .from("event_secrets")
+      .upsert({ event_id: event.id, access_code: newCode, updated_at: new Date().toISOString() } as never, { onConflict: "event_id" });
     if (error) return toast.error(error.message);
     toast.success(`Nova senha: ${newCode}`);
     onSaved();
