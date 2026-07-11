@@ -14,10 +14,37 @@ export type Database = {
   }
   public: {
     Tables: {
-      events: {
+      event_secrets: {
         Row: {
           access_code: string | null
           access_code_hash: string | null
+          event_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_code?: string | null
+          access_code_hash?: string | null
+          event_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_code?: string | null
+          access_code_hash?: string | null
+          event_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_secrets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
           bg_url: string | null
           created_at: string
           date: string | null
@@ -38,8 +65,6 @@ export type Database = {
           view_count: number
         }
         Insert: {
-          access_code?: string | null
-          access_code_hash?: string | null
           bg_url?: string | null
           created_at?: string
           date?: string | null
@@ -60,8 +85,6 @@ export type Database = {
           view_count?: number
         }
         Update: {
-          access_code?: string | null
-          access_code_hash?: string | null
           bg_url?: string | null
           created_at?: string
           date?: string | null
