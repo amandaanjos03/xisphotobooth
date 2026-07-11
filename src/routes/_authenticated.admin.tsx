@@ -883,12 +883,12 @@ function EditEventDialog({
               if (p.bg !== undefined) setBg(p.bg);
             }}
           />
-          {event?.access_code && (
+          {eventAccessCode(event) && (
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center gap-3">
               <KeyRound className="size-4 text-primary" />
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground">Senha atual</div>
-                <div className="font-display font-bold tracking-[0.3em] text-primary">{event.access_code}</div>
+                <div className="font-display font-bold tracking-[0.3em] text-primary">{eventAccessCode(event)}</div>
               </div>
               <Button type="button" size="sm" variant="secondary" className="rounded-full gap-1.5" onClick={regenerateCode}>
                 <RefreshCw className="size-3.5" /> Gerar nova
