@@ -293,11 +293,11 @@ function AdminDashboard() {
                     <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{ev.description}</p>
                   )}
                   {ev.requires_code ? (
-                    ev.access_code ? (
+                    eventAccessCode(ev) ? (
                       <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
                         <KeyRound className="size-3.5 text-primary" />
                         <span className="text-muted-foreground">Senha:</span>
-                        <span className="font-display font-bold tracking-[0.25em] text-primary">{ev.access_code}</span>
+                        <span className="font-display font-bold tracking-[0.25em] text-primary">{eventAccessCode(ev)}</span>
                       </div>
                     ) : null
                   ) : (
