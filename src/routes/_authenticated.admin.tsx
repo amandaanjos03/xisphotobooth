@@ -661,8 +661,6 @@ function CreateEventDialog({
         print_layout: printLayout,
         photo_count: photoCount,
         owner_id: ownerId,
-        access_code: code,
-        access_code_hash: null,
         requires_code: requireCode,
       };
       const { data, error } = await supabase
@@ -671,9 +669,16 @@ function CreateEventDialog({
         .select("*")
         .single();
       if (error) throw error;
+      const created = data as unknown as EventRow;
+      if (code) {
+        const { error: secErr } = await supabase
+          .from("event_secrets")
+          .insert({ event_id: created.id, access_code: code } as never);
+        if (secErr) throw secErr;
+      }
       toast.success("Evento criado");
       qc.invalidateQueries({ queryKey: ["events", ownerId] });
-      onCreated(data as unknown as EventRow, code ?? "");
+      onCreated(created, code ?? "");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
