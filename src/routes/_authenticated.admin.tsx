@@ -815,11 +815,12 @@ function EditEventDialog({
         logo_size: logoSize,
         requires_code: requireCode,
       };
-      if (requireCode && !event.access_code) {
-        patch.access_code = generateAccessCode();
+      const existingCode = eventAccessCode(event);
+      let nextCode: string | null | undefined = undefined;
+      if (requireCode && !existingCode) {
+        nextCode = generateAccessCode();
       } else if (!requireCode) {
-        patch.access_code = null;
-        patch.access_code_hash = null;
+        nextCode = null;
       }
       if (frame) {
         patch.frame_url = await uploadAndSign("event-frames", `${event.slug}/${Date.now()}-${frame.name}`, frame, frame.type);
@@ -832,6 +833,14 @@ function EditEventDialog({
       }
       const { error } = await supabase.from("events").update(patch as never).eq("id", event.id);
       if (error) throw error;
+      if (nextCode === null) {
+        await supabase.from("event_secrets").delete().eq("event_id", event.id);
+      } else if (typeof nextCode === "string") {
+        const { error: secErr } = await supabase
+          .from("event_secrets")
+          .upsert({ event_id: event.id, access_code: nextCode, updated_at: new Date().toISOString() } as never, { onConflict: "event_id" });
+        if (secErr) throw secErr;
+      }
       toast.success("Evento atualizado");
       onSaved();
       onClose();
