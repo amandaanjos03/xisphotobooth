@@ -149,8 +149,6 @@ function AdminDashboard() {
         logo_position: ev.logo_position,
         logo_size: ev.logo_size,
         requires_code: ev.requires_code,
-        access_code: newCode,
-        access_code_hash: null,
         owner_id: user.id,
       };
       const { data, error } = await supabase
@@ -159,7 +157,11 @@ function AdminDashboard() {
         .select("*")
         .single();
       if (error) throw error;
-      return { event: data as unknown as EventRow, code: newCode };
+      const created = data as unknown as EventRow;
+      if (newCode) {
+        await supabase.from("event_secrets").insert({ event_id: created.id, access_code: newCode } as never);
+      }
+      return { event: created, code: newCode };
     },
     onSuccess: ({ event, code }) => {
       toast.success("Evento duplicado");
