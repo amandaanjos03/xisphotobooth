@@ -62,6 +62,14 @@ function generateAccessCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function eventAccessCode(ev: EventRow | null | undefined): string | null {
+  if (!ev) return null;
+  const s = ev.event_secrets;
+  if (!s) return null;
+  const row = Array.isArray(s) ? s[0] : s;
+  return row?.access_code ?? null;
+}
+
 function AdminDashboard() {
   const { user } = Route.useRouteContext() as { user: { id: string; email?: string } };
   const qc = useQueryClient();
