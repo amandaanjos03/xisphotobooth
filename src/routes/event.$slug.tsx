@@ -783,7 +783,7 @@ function UploadFlow({
     if (video) {
       setFiles([video]);
     } else {
-      setFiles(arr.slice(0, event.photo_count));
+      setFiles(arr);
     }
   }
 
