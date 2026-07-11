@@ -37,8 +37,7 @@ type EventRow = {
   photo_count: number;
   created_at: string;
   owner_id: string | null;
-  access_code: string | null;
-  access_code_hash: string | null;
+  event_secrets?: { access_code: string | null }[] | { access_code: string | null } | null;
   overlay_type: OverlayType;
   logo_url: string | null;
   logo_position: LogoPosition;
