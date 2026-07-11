@@ -37,8 +37,7 @@ type EventRow = {
   photo_count: number;
   created_at: string;
   owner_id: string | null;
-  access_code: string | null;
-  access_code_hash: string | null;
+  event_secrets?: { access_code: string | null }[] | { access_code: string | null } | null;
   overlay_type: OverlayType;
   logo_url: string | null;
   logo_position: LogoPosition;
@@ -63,6 +62,14 @@ function generateAccessCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function eventAccessCode(ev: EventRow | null | undefined): string | null {
+  if (!ev) return null;
+  const s = ev.event_secrets;
+  if (!s) return null;
+  const row = Array.isArray(s) ? s[0] : s;
+  return row?.access_code ?? null;
+}
+
 function AdminDashboard() {
   const { user } = Route.useRouteContext() as { user: { id: string; email?: string } };
   const qc = useQueryClient();
@@ -75,7 +82,7 @@ function AdminDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("*")
+        .select("*, event_secrets(access_code)")
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -142,8 +149,6 @@ function AdminDashboard() {
         logo_position: ev.logo_position,
         logo_size: ev.logo_size,
         requires_code: ev.requires_code,
-        access_code: newCode,
-        access_code_hash: null,
         owner_id: user.id,
       };
       const { data, error } = await supabase
@@ -152,7 +157,11 @@ function AdminDashboard() {
         .select("*")
         .single();
       if (error) throw error;
-      return { event: data as unknown as EventRow, code: newCode };
+      const created = data as unknown as EventRow;
+      if (newCode) {
+        await supabase.from("event_secrets").insert({ event_id: created.id, access_code: newCode } as never);
+      }
+      return { event: created, code: newCode };
     },
     onSuccess: ({ event, code }) => {
       toast.success("Evento duplicado");
@@ -286,11 +295,11 @@ function AdminDashboard() {
                     <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{ev.description}</p>
                   )}
                   {ev.requires_code ? (
-                    ev.access_code ? (
+                    eventAccessCode(ev) ? (
                       <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
                         <KeyRound className="size-3.5 text-primary" />
                         <span className="text-muted-foreground">Senha:</span>
-                        <span className="font-display font-bold tracking-[0.25em] text-primary">{ev.access_code}</span>
+                        <span className="font-display font-bold tracking-[0.25em] text-primary">{eventAccessCode(ev)}</span>
                       </div>
                     ) : null
                   ) : (
@@ -652,8 +661,6 @@ function CreateEventDialog({
         print_layout: printLayout,
         photo_count: photoCount,
         owner_id: ownerId,
-        access_code: code,
-        access_code_hash: null,
         requires_code: requireCode,
       };
       const { data, error } = await supabase
@@ -662,9 +669,16 @@ function CreateEventDialog({
         .select("*")
         .single();
       if (error) throw error;
+      const created = data as unknown as EventRow;
+      if (code) {
+        const { error: secErr } = await supabase
+          .from("event_secrets")
+          .insert({ event_id: created.id, access_code: code } as never);
+        if (secErr) throw secErr;
+      }
       toast.success("Evento criado");
       qc.invalidateQueries({ queryKey: ["events", ownerId] });
-      onCreated(data as unknown as EventRow, code ?? "");
+      onCreated(created, code ?? "");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -776,7 +790,9 @@ function EditEventDialog({
     if (!event) return;
     if (!confirm("Gerar uma nova senha para este evento? A anterior deixará de funcionar.")) return;
     const newCode = generateAccessCode();
-    const { error } = await supabase.from("events").update({ access_code: newCode } as never).eq("id", event.id);
+    const { error } = await supabase
+      .from("event_secrets")
+      .upsert({ event_id: event.id, access_code: newCode, updated_at: new Date().toISOString() } as never, { onConflict: "event_id" });
     if (error) return toast.error(error.message);
     toast.success(`Nova senha: ${newCode}`);
     onSaved();
@@ -799,11 +815,12 @@ function EditEventDialog({
         logo_size: logoSize,
         requires_code: requireCode,
       };
-      if (requireCode && !event.access_code) {
-        patch.access_code = generateAccessCode();
+      const existingCode = eventAccessCode(event);
+      let nextCode: string | null | undefined = undefined;
+      if (requireCode && !existingCode) {
+        nextCode = generateAccessCode();
       } else if (!requireCode) {
-        patch.access_code = null;
-        patch.access_code_hash = null;
+        nextCode = null;
       }
       if (frame) {
         patch.frame_url = await uploadAndSign("event-frames", `${event.slug}/${Date.now()}-${frame.name}`, frame, frame.type);
@@ -816,6 +833,14 @@ function EditEventDialog({
       }
       const { error } = await supabase.from("events").update(patch as never).eq("id", event.id);
       if (error) throw error;
+      if (nextCode === null) {
+        await supabase.from("event_secrets").delete().eq("event_id", event.id);
+      } else if (typeof nextCode === "string") {
+        const { error: secErr } = await supabase
+          .from("event_secrets")
+          .upsert({ event_id: event.id, access_code: nextCode, updated_at: new Date().toISOString() } as never, { onConflict: "event_id" });
+        if (secErr) throw secErr;
+      }
       toast.success("Evento atualizado");
       onSaved();
       onClose();
@@ -858,12 +883,12 @@ function EditEventDialog({
               if (p.bg !== undefined) setBg(p.bg);
             }}
           />
-          {event?.access_code && (
+          {eventAccessCode(event) && (
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center gap-3">
               <KeyRound className="size-4 text-primary" />
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground">Senha atual</div>
-                <div className="font-display font-bold tracking-[0.3em] text-primary">{event.access_code}</div>
+                <div className="font-display font-bold tracking-[0.3em] text-primary">{eventAccessCode(event)}</div>
               </div>
               <Button type="button" size="sm" variant="secondary" className="rounded-full gap-1.5" onClick={regenerateCode}>
                 <RefreshCw className="size-3.5" /> Gerar nova
@@ -891,7 +916,7 @@ function ShareDialog({
   const url = event && typeof window !== "undefined"
     ? `${window.location.origin}/event/${event.slug}`
     : "";
-  const codeToShow = accessCode ?? event?.access_code ?? null;
+  const codeToShow = accessCode ?? eventAccessCode(event) ?? null;
 
   useEffect(() => {
     if (!event || !url) return;
