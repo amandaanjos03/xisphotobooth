@@ -1038,6 +1038,24 @@ function ShareDialog({
           >
             <Download className="size-4" /> Baixar QR Code
           </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            className="w-full rounded-full gap-2"
+            disabled={!qr || !event}
+            onClick={() => {
+              if (!qr || !event) return;
+              downloadEventCardPdf({
+                qrDataUrl: qr,
+                eventName: event.name,
+                url,
+                code: codeToShow,
+              });
+            }}
+          >
+            <FileText className="size-4" /> Baixar cartão A4 para impressão
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
