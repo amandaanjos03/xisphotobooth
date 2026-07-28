@@ -15,7 +15,7 @@ import {
 import {
   Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
   ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
-  CopyPlus, Eye, ShieldCheck,
+  CopyPlus, Eye, ShieldCheck, Instagram, FileText,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -45,6 +45,7 @@ type EventRow = {
   requires_code: boolean;
   view_count: number;
   download_count: number;
+  instagram_filter_url: string | null;
 };
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
