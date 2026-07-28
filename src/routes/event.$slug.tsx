@@ -650,6 +650,7 @@ function CaptureFlow({
   const [error, setError] = useState<string | null>(null);
   const [facing, setFacing] = useState<"user" | "environment">("user");
   const [switching, setSwitching] = useState(false);
+  const [filter, setFilter] = useState<LiveFilter>("normal");
 
   useEffect(() => {
     let cancelled = false;
