@@ -95,3 +95,64 @@ export async function downloadAlbumPdf(
 
   pdf.save(filename);
 }
+
+export function downloadEventCardPdf({
+  qrDataUrl, eventName, url, code,
+}: { qrDataUrl: string; eventName: string; url: string; code: string | null }) {
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+
+  // Warm cream background
+  pdf.setFillColor(253, 246, 217);
+  pdf.rect(0, 0, pageW, pageH, "F");
+
+  // Border
+  pdf.setDrawColor(14, 82, 74);
+  pdf.setLineWidth(1.5);
+  pdf.rect(10, 10, pageW - 20, pageH - 20);
+
+  // Headline
+  pdf.setTextColor(14, 82, 74);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(42);
+  pdf.text("Que bom que você veio!!!", pageW / 2, 45, { align: "center" });
+
+  pdf.setFontSize(22);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(eventName, pageW / 2, 60, { align: "center" });
+
+  // Instructions
+  pdf.setFontSize(16);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Como participar:", pageW / 2, 82, { align: "center" });
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(13);
+  const steps = [
+    "1. Aponte a câmera do celular para o QR Code",
+    "2. Toque no link que aparecer",
+    code ? `3. Informe a senha do evento: ${code}` : "3. Tire quantas fotos quiser!",
+    code ? "4. Tire fotos, grave vídeos e leve suas lembranças" : "4. Baixe suas lembranças a qualquer momento",
+  ];
+  steps.forEach((s, i) => pdf.text(s, pageW / 2, 94 + i * 8, { align: "center" }));
+
+  // QR code centered
+  const qrSize = 90;
+  const qrX = (pageW - qrSize) / 2;
+  const qrY = 135;
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8, "F");
+  pdf.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
+
+  // Code + URL
+  if (code) {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(28);
+    pdf.text(`Senha: ${code}`, pageW / 2, qrY + qrSize + 15, { align: "center" });
+  }
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(11);
+  pdf.text(url, pageW / 2, qrY + qrSize + (code ? 25 : 15), { align: "center" });
+
+  pdf.save(`cartao-${eventName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+}
