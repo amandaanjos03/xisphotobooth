@@ -379,6 +379,7 @@ function EventFormFields({
     logoPosition: LogoPosition;
     logoSize: number;
     requireCode: boolean;
+    instagramUrl: string;
     frame: File | null;
     logo: File | null;
     bg: File | null;
@@ -581,6 +582,22 @@ function EventFormFields({
           </div>
         )}
         <p className="text-xs text-muted-foreground">Será aplicada como plano de fundo da página da cabine.</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ig">Filtro do Instagram (link opcional)</Label>
+        <div className="relative">
+          <Instagram className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="ig"
+            type="url"
+            className="pl-9"
+            value={values.instagramUrl}
+            onChange={(e) => onChange({ instagramUrl: e.target.value })}
+            placeholder="https://www.instagram.com/ar/..."
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">Aparecerá como botão "Abrir filtro no Instagram" para os convidados.</p>
       </div>
     </>
   );
