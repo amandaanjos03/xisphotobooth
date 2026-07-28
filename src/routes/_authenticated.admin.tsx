@@ -20,6 +20,7 @@ import {
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import xisLogo from "@/assets/xis-logo.png.asset.json";
+import { downloadEventCardPdf } from "@/lib/exports";
 
 type PrintLayout = "portrait" | "landscape" | "a4";
 type OverlayType = "frame" | "logo";
