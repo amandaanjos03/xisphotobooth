@@ -101,8 +101,27 @@ type MediaType = "image" | "video";
 
 const ACCESS_KEY_PREFIX = "xis:access:";
 
+function buildOverlayOptions(event: EventRow, extras: ExtraFrame[]): OverlayChoice[] {
+  const opts: OverlayChoice[] = [];
+  if (event.frame_url) opts.push({ kind: "frame", frameUrl: event.frame_url, label: "Moldura principal" });
+  for (const f of extras) opts.push({ kind: "frame", frameUrl: f.frame_url, label: f.name || "Moldura" });
+  if (event.logo_url) opts.push({ kind: "logo", label: "Somente logo" });
+  opts.push({ kind: "none", label: "Sem overlay" });
+  return opts;
+}
+
+function applyChoice(event: EventRow, choice: OverlayChoice): EventRow {
+  if (choice.kind === "frame") {
+    return { ...event, overlay_type: "frame", frame_url: choice.frameUrl };
+  }
+  if (choice.kind === "logo") {
+    return { ...event, overlay_type: "logo" };
+  }
+  return { ...event, overlay_type: "frame", frame_url: null, logo_url: null };
+}
+
 function BoothPage() {
-  const { event } = Route.useLoaderData();
+  const { event, extraFrames } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
 
   // Track guest link access once per session.
@@ -114,61 +133,39 @@ function BoothPage() {
     supabase.rpc("increment_event_view" as never, { _slug: event.slug } as never).then(() => {}, () => {});
   }, [event.slug]);
 
+  const overlayOptions = buildOverlayOptions(event, extraFrames);
+  const [choiceIdx, setChoiceIdx] = useState(0);
+  const choice = overlayOptions[Math.min(choiceIdx, overlayOptions.length - 1)] ?? { kind: "none" as const, label: "Sem overlay" };
+  const effectiveEvent = applyChoice(event, choice);
+
   const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
   const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string; mediaType: MediaType } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Persist unlock in sessionStorage so refreshing the kiosk doesn't re-prompt the guest.
-  // If signed in as an admin, skip the access gate entirely.
-  // If the event doesn't require a code, unlock immediately.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!event.requires_code) {
-      setUnlocked(true);
-      setCheckingAuth(false);
-      return;
-    }
-    if (window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug) === "1") {
-      setUnlocked(true);
-      setCheckingAuth(false);
-      return;
-    }
+    if (!event.requires_code) { setUnlocked(true); setCheckingAuth(false); return; }
+    if (window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug) === "1") { setUnlocked(true); setCheckingAuth(false); return; }
     let cancelled = false;
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!cancelled && userData.user) {
         const { data: roleRow } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userData.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        if (!cancelled && roleRow) {
-          setUnlocked(true);
-        }
+          .from("user_roles").select("role").eq("user_id", userData.user.id).eq("role", "admin").maybeSingle();
+        if (!cancelled && roleRow) setUnlocked(true);
       }
       if (!cancelled) setCheckingAuth(false);
     })();
     return () => { cancelled = true; };
   }, [event.slug, event.requires_code]);
 
-  function reset() {
-    setFinalPhoto(null);
-    setPhase("welcome");
-  }
+  function reset() { setFinalPhoto(null); setPhase("welcome"); }
 
   if (checkingAuth) {
-    return (
-      <div className="min-h-screen bg-blob grid place-items-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <div className="min-h-screen bg-blob grid place-items-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
   }
-
-  if (!unlocked) {
-    return <AccessGate event={event} onUnlock={() => setUnlocked(true)} />;
-  }
+  if (!unlocked) return <AccessGate event={event} onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div
@@ -186,6 +183,9 @@ function BoothPage() {
       {phase === "welcome" && (
         <Welcome
           event={event}
+          overlayOptions={overlayOptions}
+          choiceIdx={choiceIdx}
+          onChoose={setChoiceIdx}
           onStart={() => setPhase("capture")}
           onUpload={(src) => { setUploadSource(src); setPhase("upload"); }}
           onRecordVideo={() => setPhase("record-video")}
@@ -193,7 +193,7 @@ function BoothPage() {
       )}
       {phase === "capture" && (
         <CaptureFlow
-          event={event}
+          event={effectiveEvent}
           onDone={(photo) => { setFinalPhoto({ ...photo, mediaType: "image" }); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
@@ -201,7 +201,7 @@ function BoothPage() {
       )}
       {phase === "upload" && (
         <UploadFlow
-          event={event}
+          event={effectiveEvent}
           source={uploadSource}
           onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
           onCancel={reset}
@@ -210,7 +210,7 @@ function BoothPage() {
       )}
       {phase === "record-video" && (
         <RecordVideoFlow
-          event={event}
+          event={effectiveEvent}
           onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
           onCancel={reset}
           onUploading={() => setPhase("composing")}
@@ -223,11 +223,12 @@ function BoothPage() {
         </div>
       )}
       {phase === "done" && finalPhoto && (
-        <DoneScreen event={event} photo={finalPhoto} onReset={reset} />
+        <DoneScreen event={effectiveEvent} photo={finalPhoto} onReset={reset} />
       )}
     </div>
   );
 }
+
 
 function PrintPageStyle({ layout }: { layout: PrintLayout }) {
   useEffect(() => {
