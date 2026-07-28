@@ -784,6 +784,7 @@ function CaptureFlow({
           ref={videoRef}
           playsInline
           muted
+          style={{ filter: FILTERS[filter].css }}
           className={`absolute inset-0 size-full object-cover bg-black ${mirror ? "[transform:scaleX(-1)]" : ""}`}
         />
         <button
