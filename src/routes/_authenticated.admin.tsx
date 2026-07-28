@@ -151,6 +151,7 @@ function AdminDashboard() {
         logo_size: ev.logo_size,
         requires_code: ev.requires_code,
         owner_id: user.id,
+        instagram_filter_url: ev.instagram_filter_url,
       };
       const { data, error } = await supabase
         .from("events")
