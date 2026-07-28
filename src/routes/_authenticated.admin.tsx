@@ -616,6 +616,7 @@ function CreateEventDialog({
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
   const [logoSize, setLogoSize] = useState<number>(25);
   const [requireCode, setRequireCode] = useState<boolean>(true);
+  const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [frame, setFrame] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
@@ -680,6 +681,7 @@ function CreateEventDialog({
         photo_count: photoCount,
         owner_id: ownerId,
         requires_code: requireCode,
+        instagram_filter_url: instagramUrl.trim() || null,
       };
       const { data, error } = await supabase
         .from("events")
@@ -717,7 +719,7 @@ function CreateEventDialog({
         <EventFormFields
           values={{
             name, date, photoCount, description, printLayout,
-            overlayType, logoPosition, logoSize, requireCode,
+            overlayType, logoPosition, logoSize, requireCode, instagramUrl,
             frame, logo, bg, framePreview, logoPreview, bgPreview,
           }}
           onChange={(p) => {
@@ -730,6 +732,7 @@ function CreateEventDialog({
             if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
             if (p.logoSize !== undefined) setLogoSize(p.logoSize);
             if (p.requireCode !== undefined) setRequireCode(p.requireCode);
+            if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
             if (p.frame !== undefined) setFrame(p.frame);
             if (p.logo !== undefined) setLogo(p.logo);
             if (p.bg !== undefined) setBg(p.bg);
