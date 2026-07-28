@@ -33,6 +33,7 @@ type EventRow = {
   logo_position: LogoPosition;
   logo_size: number;
   requires_code: boolean;
+  instagram_filter_url: string | null;
 };
 
 export const Route = createFileRoute("/event/$slug")({
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code")
+      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code, instagram_filter_url")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
