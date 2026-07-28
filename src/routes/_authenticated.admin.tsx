@@ -762,6 +762,7 @@ function EditEventDialog({
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
   const [logoSize, setLogoSize] = useState<number>(25);
   const [requireCode, setRequireCode] = useState<boolean>(true);
+  const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [frame, setFrame] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
@@ -781,6 +782,7 @@ function EditEventDialog({
     setLogoPosition(event.logo_position ?? "bottom");
     setLogoSize(event.logo_size ?? 25);
     setRequireCode(event.requires_code ?? true);
+    setInstagramUrl(event.instagram_filter_url ?? "");
     setFrame(null);
     setLogo(null);
     setBg(null);
@@ -835,6 +837,7 @@ function EditEventDialog({
         logo_position: logoPosition,
         logo_size: logoSize,
         requires_code: requireCode,
+        instagram_filter_url: instagramUrl.trim() || null,
       };
       const existingCode = eventAccessCode(event);
       let nextCode: string | null | undefined = undefined;
@@ -883,7 +886,7 @@ function EditEventDialog({
           <EventFormFields
             values={{
               name, date, photoCount, description, printLayout,
-              overlayType, logoPosition, logoSize, requireCode,
+              overlayType, logoPosition, logoSize, requireCode, instagramUrl,
               frame, logo, bg, framePreview, logoPreview, bgPreview,
               existingFrameUrl: event?.frame_url ?? null,
               existingLogoUrl: event?.logo_url ?? null,
@@ -899,6 +902,7 @@ function EditEventDialog({
               if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
               if (p.logoSize !== undefined) setLogoSize(p.logoSize);
               if (p.requireCode !== undefined) setRequireCode(p.requireCode);
+              if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
               if (p.frame !== undefined) setFrame(p.frame);
               if (p.logo !== undefined) setLogo(p.logo);
               if (p.bg !== undefined) setBg(p.bg);
