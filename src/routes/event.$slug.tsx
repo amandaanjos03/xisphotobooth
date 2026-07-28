@@ -36,6 +36,23 @@ type EventRow = {
   instagram_filter_url: string | null;
 };
 
+type ExtraFrame = { id: string; frame_url: string; name: string | null };
+
+type LiveFilter = "normal" | "vintage" | "pb" | "vibrant" | "soft";
+
+const FILTERS: Record<LiveFilter, { label: string; css: string }> = {
+  normal:  { label: "Normal",   css: "none" },
+  vintage: { label: "Vintage",  css: "sepia(0.55) saturate(1.2) contrast(1.05)" },
+  pb:      { label: "P&B",      css: "grayscale(1) contrast(1.05)" },
+  vibrant: { label: "Vibrante", css: "saturate(1.5) contrast(1.1)" },
+  soft:    { label: "Soft",     css: "brightness(1.08) contrast(0.95) saturate(1.15)" },
+};
+
+type OverlayChoice =
+  | { kind: "frame"; frameUrl: string; label: string }
+  | { kind: "logo"; label: string }
+  | { kind: "none"; label: string };
+
 export const Route = createFileRoute("/event/$slug")({
   component: BoothPage,
   loader: async ({ params }) => {
@@ -46,7 +63,13 @@ export const Route = createFileRoute("/event/$slug")({
       .maybeSingle();
     if (error) throw error;
     if (!data) throw notFound();
-    return { event: data as unknown as EventRow };
+    const event = data as unknown as EventRow;
+    const { data: framesData } = await supabase
+      .from("event_frames")
+      .select("id, frame_url, name")
+      .eq("event_id", event.id)
+      .order("position", { ascending: true });
+    return { event, extraFrames: (framesData ?? []) as ExtraFrame[] };
   },
   head: ({ loaderData }) => ({
     meta: [
