@@ -36,6 +36,23 @@ type EventRow = {
   instagram_filter_url: string | null;
 };
 
+type ExtraFrame = { id: string; frame_url: string; name: string | null };
+
+type LiveFilter = "normal" | "vintage" | "pb" | "vibrant" | "soft";
+
+const FILTERS: Record<LiveFilter, { label: string; css: string }> = {
+  normal:  { label: "Normal",   css: "none" },
+  vintage: { label: "Vintage",  css: "sepia(0.55) saturate(1.2) contrast(1.05)" },
+  pb:      { label: "P&B",      css: "grayscale(1) contrast(1.05)" },
+  vibrant: { label: "Vibrante", css: "saturate(1.5) contrast(1.1)" },
+  soft:    { label: "Soft",     css: "brightness(1.08) contrast(0.95) saturate(1.15)" },
+};
+
+type OverlayChoice =
+  | { kind: "frame"; frameUrl: string; label: string }
+  | { kind: "logo"; label: string }
+  | { kind: "none"; label: string };
+
 export const Route = createFileRoute("/event/$slug")({
   component: BoothPage,
   loader: async ({ params }) => {
@@ -46,7 +63,13 @@ export const Route = createFileRoute("/event/$slug")({
       .maybeSingle();
     if (error) throw error;
     if (!data) throw notFound();
-    return { event: data as unknown as EventRow };
+    const event = data as unknown as EventRow;
+    const { data: framesData } = await supabase
+      .from("event_frames")
+      .select("id, frame_url, name")
+      .eq("event_id", event.id)
+      .order("position", { ascending: true });
+    return { event, extraFrames: (framesData ?? []) as ExtraFrame[] };
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -78,8 +101,27 @@ type MediaType = "image" | "video";
 
 const ACCESS_KEY_PREFIX = "xis:access:";
 
+function buildOverlayOptions(event: EventRow, extras: ExtraFrame[]): OverlayChoice[] {
+  const opts: OverlayChoice[] = [];
+  if (event.frame_url) opts.push({ kind: "frame", frameUrl: event.frame_url, label: "Moldura principal" });
+  for (const f of extras) opts.push({ kind: "frame", frameUrl: f.frame_url, label: f.name || "Moldura" });
+  if (event.logo_url) opts.push({ kind: "logo", label: "Somente logo" });
+  opts.push({ kind: "none", label: "Sem overlay" });
+  return opts;
+}
+
+function applyChoice(event: EventRow, choice: OverlayChoice): EventRow {
+  if (choice.kind === "frame") {
+    return { ...event, overlay_type: "frame", frame_url: choice.frameUrl };
+  }
+  if (choice.kind === "logo") {
+    return { ...event, overlay_type: "logo" };
+  }
+  return { ...event, overlay_type: "frame", frame_url: null, logo_url: null };
+}
+
 function BoothPage() {
-  const { event } = Route.useLoaderData();
+  const { event, extraFrames } = Route.useLoaderData();
   const [phase, setPhase] = useState<Phase>("welcome");
 
   // Track guest link access once per session.
@@ -91,61 +133,39 @@ function BoothPage() {
     supabase.rpc("increment_event_view" as never, { _slug: event.slug } as never).then(() => {}, () => {});
   }, [event.slug]);
 
+  const overlayOptions = buildOverlayOptions(event, extraFrames);
+  const [choiceIdx, setChoiceIdx] = useState(0);
+  const choice = overlayOptions[Math.min(choiceIdx, overlayOptions.length - 1)] ?? { kind: "none" as const, label: "Sem overlay" };
+  const effectiveEvent = applyChoice(event, choice);
+
   const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
   const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string; mediaType: MediaType } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Persist unlock in sessionStorage so refreshing the kiosk doesn't re-prompt the guest.
-  // If signed in as an admin, skip the access gate entirely.
-  // If the event doesn't require a code, unlock immediately.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!event.requires_code) {
-      setUnlocked(true);
-      setCheckingAuth(false);
-      return;
-    }
-    if (window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug) === "1") {
-      setUnlocked(true);
-      setCheckingAuth(false);
-      return;
-    }
+    if (!event.requires_code) { setUnlocked(true); setCheckingAuth(false); return; }
+    if (window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug) === "1") { setUnlocked(true); setCheckingAuth(false); return; }
     let cancelled = false;
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!cancelled && userData.user) {
         const { data: roleRow } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userData.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        if (!cancelled && roleRow) {
-          setUnlocked(true);
-        }
+          .from("user_roles").select("role").eq("user_id", userData.user.id).eq("role", "admin").maybeSingle();
+        if (!cancelled && roleRow) setUnlocked(true);
       }
       if (!cancelled) setCheckingAuth(false);
     })();
     return () => { cancelled = true; };
   }, [event.slug, event.requires_code]);
 
-  function reset() {
-    setFinalPhoto(null);
-    setPhase("welcome");
-  }
+  function reset() { setFinalPhoto(null); setPhase("welcome"); }
 
   if (checkingAuth) {
-    return (
-      <div className="min-h-screen bg-blob grid place-items-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <div className="min-h-screen bg-blob grid place-items-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
   }
-
-  if (!unlocked) {
-    return <AccessGate event={event} onUnlock={() => setUnlocked(true)} />;
-  }
+  if (!unlocked) return <AccessGate event={event} onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div
@@ -163,6 +183,9 @@ function BoothPage() {
       {phase === "welcome" && (
         <Welcome
           event={event}
+          overlayOptions={overlayOptions}
+          choiceIdx={choiceIdx}
+          onChoose={setChoiceIdx}
           onStart={() => setPhase("capture")}
           onUpload={(src) => { setUploadSource(src); setPhase("upload"); }}
           onRecordVideo={() => setPhase("record-video")}
@@ -170,7 +193,7 @@ function BoothPage() {
       )}
       {phase === "capture" && (
         <CaptureFlow
-          event={event}
+          event={effectiveEvent}
           onDone={(photo) => { setFinalPhoto({ ...photo, mediaType: "image" }); setPhase("done"); }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
@@ -178,7 +201,7 @@ function BoothPage() {
       )}
       {phase === "upload" && (
         <UploadFlow
-          event={event}
+          event={effectiveEvent}
           source={uploadSource}
           onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
           onCancel={reset}
@@ -187,7 +210,7 @@ function BoothPage() {
       )}
       {phase === "record-video" && (
         <RecordVideoFlow
-          event={event}
+          event={effectiveEvent}
           onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
           onCancel={reset}
           onUploading={() => setPhase("composing")}
@@ -200,11 +223,12 @@ function BoothPage() {
         </div>
       )}
       {phase === "done" && finalPhoto && (
-        <DoneScreen event={event} photo={finalPhoto} onReset={reset} />
+        <DoneScreen event={effectiveEvent} photo={finalPhoto} onReset={reset} />
       )}
     </div>
   );
 }
+
 
 function PrintPageStyle({ layout }: { layout: PrintLayout }) {
   useEffect(() => {
@@ -303,8 +327,16 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
 }
 
 function Welcome({
-  event, onStart, onUpload, onRecordVideo,
-}: { event: EventRow; onStart: () => void; onUpload: (src: UploadSource) => void; onRecordVideo: () => void }) {
+  event, overlayOptions, choiceIdx, onChoose, onStart, onUpload, onRecordVideo,
+}: {
+  event: EventRow;
+  overlayOptions: OverlayChoice[];
+  choiceIdx: number;
+  onChoose: (i: number) => void;
+  onStart: () => void;
+  onUpload: (src: UploadSource) => void;
+  onRecordVideo: () => void;
+}) {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-20 text-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
@@ -358,10 +390,50 @@ function Welcome({
           </a>
         )}
       </div>
+      {overlayOptions.length > 1 && (
+        <OverlayPicker options={overlayOptions} value={choiceIdx} onChange={onChoose} />
+      )}
       <AlbumGrid event={event} />
     </div>
   );
 }
+
+function OverlayPicker({
+  options, value, onChange,
+}: { options: OverlayChoice[]; value: number; onChange: (i: number) => void }) {
+  return (
+    <section className="mt-12 text-left">
+      <h2 className="font-display text-xl font-bold text-center">Escolha a moldura</h2>
+      <p className="text-center text-sm text-muted-foreground mt-1">Aplicada em fotos e vídeos.</p>
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {options.map((opt, i) => {
+          const active = i === value;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onChange(i)}
+              className={`card-soft overflow-hidden text-left transition active:scale-95 ${active ? "ring-2 ring-primary" : "opacity-90 hover:opacity-100"}`}
+            >
+              <div className="aspect-square bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))] relative grid place-items-center">
+                {opt.kind === "frame" ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={opt.frameUrl} alt={opt.label} className="absolute inset-0 size-full object-contain p-2" />
+                ) : opt.kind === "logo" ? (
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Somente logo</span>
+                ) : (
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Sem overlay</span>
+                )}
+              </div>
+              <div className="p-2 text-xs font-semibold truncate text-center">{opt.label}</div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 
 function AlbumGrid({ event }: { event: EventRow }) {
   const PAGE_SIZE = 12;
@@ -578,6 +650,7 @@ function CaptureFlow({
   const [error, setError] = useState<string | null>(null);
   const [facing, setFacing] = useState<"user" | "environment">("user");
   const [switching, setSwitching] = useState(false);
+  const [filter, setFilter] = useState<LiveFilter>("normal");
 
   useEffect(() => {
     let cancelled = false;
@@ -638,10 +711,12 @@ function CaptureFlow({
       ctx.translate(TARGET_W, 0);
       ctx.scale(-1, 1);
     }
+    const css = FILTERS[filter].css;
+    if (css !== "none") ctx.filter = css;
     ctx.drawImage(v, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
     ctx.restore();
     return canvas.toDataURL("image/jpeg", 0.92);
-  }, [mirror]);
+  }, [mirror, filter]);
 
   useEffect(() => {
     if (!ready || error) return;
@@ -709,6 +784,7 @@ function CaptureFlow({
           ref={videoRef}
           playsInline
           muted
+          style={{ filter: FILTERS[filter].css }}
           className={`absolute inset-0 size-full object-cover bg-black ${mirror ? "[transform:scaleX(-1)]" : ""}`}
         />
         <button
@@ -745,6 +821,19 @@ function CaptureFlow({
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {(Object.keys(FILTERS) as LiveFilter[]).map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setFilter(k)}
+            className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider border transition ${filter === k ? "bg-primary text-primary-foreground border-primary" : "bg-background/70 border-border text-muted-foreground hover:bg-accent"}`}
+          >
+            {FILTERS[k].label}
+          </button>
+        ))}
       </div>
 
       <div className="mt-4 flex items-center justify-between">
