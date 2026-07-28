@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, ImageIcon, Camera, Download } from "lucide-react";
+import { ArrowLeft, Loader2, ImageIcon, Camera, Download, FileArchive, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto } from "@/components/PhotoViewer";
+import { downloadAsZip, downloadAlbumPdf } from "@/lib/exports";
 
 type EventRow = {
   id: string;
@@ -107,34 +108,7 @@ function PublicGallery() {
                 <Camera className="size-4" /> Tirar novas fotos
               </Link>
             </Button>
-            <Button
-              variant="secondary"
-              className="rounded-full gap-2"
-              disabled={total === 0}
-              onClick={async () => {
-                toast.message(`Baixando ${total} foto${total === 1 ? "" : "s"}…`);
-                const all: { id: string; photo_url: string }[] = [];
-                const STEP = 200;
-                for (let from = 0; from < total; from += STEP) {
-                  const { data, error } = await supabase
-                    .from("photos")
-                    .select("id, photo_url")
-                    .eq("event_id", event.id)
-                    .eq("hidden", false)
-                    .order("created_at", { ascending: false })
-                    .range(from, from + STEP - 1);
-                  if (error) { toast.error(error.message); return; }
-                  all.push(...(data ?? []));
-                }
-                for (let i = 0; i < all.length; i++) {
-                  await downloadPhoto(all[i].photo_url, `${event.slug}-${i + 1}.jpg`);
-                  await new Promise((r) => setTimeout(r, 250));
-                }
-                toast.success("Download concluído");
-              }}
-            >
-              <Download className="size-4" /> Baixar todas
-            </Button>
+            <BulkActions eventId={event.id} eventSlug={event.slug} eventName={event.name} total={total} />
           </div>
         </div>
 
@@ -204,5 +178,89 @@ function PublicGallery() {
         onOpenChange={(o) => !o && setOpen(null)}
       />
     </div>
+  );
+}
+
+async function fetchAll(eventId: string, total: number) {
+  const all: { id: string; photo_url: string; media_type: string }[] = [];
+  const STEP = 200;
+  for (let from = 0; from < total; from += STEP) {
+    const { data, error } = await supabase
+      .from("photos")
+      .select("id, photo_url, media_type")
+      .eq("event_id", eventId)
+      .eq("hidden", false)
+      .order("created_at", { ascending: false })
+      .range(from, from + STEP - 1);
+    if (error) throw error;
+    all.push(...((data ?? []) as { id: string; photo_url: string; media_type: string }[]));
+  }
+  return all;
+}
+
+function BulkActions({
+  eventId, eventSlug, eventName, total,
+}: { eventId: string; eventSlug: string; eventName: string; total: number }) {
+  const [busy, setBusy] = useState<null | "each" | "zip" | "pdf">(null);
+  const disabled = total === 0 || busy !== null;
+
+  async function saveEach() {
+    setBusy("each");
+    try {
+      const all = await fetchAll(eventId, total);
+      toast.message(`Baixando ${all.length} arquivo${all.length === 1 ? "" : "s"}…`);
+      for (let i = 0; i < all.length; i++) {
+        const ext = all[i].media_type === "video" ? "mp4" : "jpg";
+        await downloadPhoto(all[i].photo_url, `${eventSlug}-${i + 1}.${ext}`);
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      toast.success("Download concluído");
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(null); }
+  }
+
+  async function saveZip() {
+    setBusy("zip");
+    try {
+      const all = await fetchAll(eventId, total);
+      toast.message(`Compactando ${all.length} arquivo${all.length === 1 ? "" : "s"}…`);
+      const items = all.map((p, i) => ({
+        url: p.photo_url,
+        filename: `${eventSlug}-${i + 1}.${p.media_type === "video" ? "mp4" : "jpg"}`,
+      }));
+      await downloadAsZip(items, `${eventSlug}.zip`);
+      toast.success("ZIP pronto");
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(null); }
+  }
+
+  async function savePdf() {
+    setBusy("pdf");
+    try {
+      const all = await fetchAll(eventId, total);
+      const images = all.filter((p) => p.media_type !== "video").map((p) => p.photo_url);
+      if (images.length === 0) { toast.error("Nenhuma foto para exportar"); return; }
+      toast.message(`Gerando PDF com ${images.length} foto${images.length === 1 ? "" : "s"}…`);
+      await downloadAlbumPdf(images, eventName, `${eventSlug}-album.pdf`);
+      toast.success("PDF pronto");
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(null); }
+  }
+
+  return (
+    <>
+      <Button variant="secondary" className="rounded-full gap-2" disabled={disabled} onClick={saveEach}>
+        {busy === "each" ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+        Baixar todas
+      </Button>
+      <Button variant="secondary" className="rounded-full gap-2" disabled={disabled} onClick={saveZip}>
+        {busy === "zip" ? <Loader2 className="size-4 animate-spin" /> : <FileArchive className="size-4" />}
+        Baixar ZIP
+      </Button>
+      <Button variant="secondary" className="rounded-full gap-2" disabled={disabled} onClick={savePdf}>
+        {busy === "pdf" ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+        Álbum PDF
+      </Button>
+    </>
   );
 }

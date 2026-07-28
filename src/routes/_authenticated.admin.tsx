@@ -15,11 +15,12 @@ import {
 import {
   Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
   ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
-  CopyPlus, Eye, ShieldCheck,
+  CopyPlus, Eye, ShieldCheck, Instagram, FileText,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import xisLogo from "@/assets/xis-logo.png.asset.json";
+import { downloadEventCardPdf } from "@/lib/exports";
 
 type PrintLayout = "portrait" | "landscape" | "a4";
 type OverlayType = "frame" | "logo";
@@ -45,6 +46,7 @@ type EventRow = {
   requires_code: boolean;
   view_count: number;
   download_count: number;
+  instagram_filter_url: string | null;
 };
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
@@ -150,6 +152,7 @@ function AdminDashboard() {
         logo_size: ev.logo_size,
         requires_code: ev.requires_code,
         owner_id: user.id,
+        instagram_filter_url: ev.instagram_filter_url,
       };
       const { data, error } = await supabase
         .from("events")
@@ -378,6 +381,7 @@ function EventFormFields({
     logoPosition: LogoPosition;
     logoSize: number;
     requireCode: boolean;
+    instagramUrl: string;
     frame: File | null;
     logo: File | null;
     bg: File | null;
@@ -581,6 +585,22 @@ function EventFormFields({
         )}
         <p className="text-xs text-muted-foreground">Será aplicada como plano de fundo da página da cabine.</p>
       </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ig">Filtro do Instagram (link opcional)</Label>
+        <div className="relative">
+          <Instagram className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="ig"
+            type="url"
+            className="pl-9"
+            value={values.instagramUrl}
+            onChange={(e) => onChange({ instagramUrl: e.target.value })}
+            placeholder="https://www.instagram.com/ar/..."
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">Aparecerá como botão "Abrir filtro no Instagram" para os convidados.</p>
+      </div>
     </>
   );
 }
@@ -598,6 +618,7 @@ function CreateEventDialog({
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
   const [logoSize, setLogoSize] = useState<number>(25);
   const [requireCode, setRequireCode] = useState<boolean>(true);
+  const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [frame, setFrame] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
@@ -662,6 +683,7 @@ function CreateEventDialog({
         photo_count: photoCount,
         owner_id: ownerId,
         requires_code: requireCode,
+        instagram_filter_url: instagramUrl.trim() || null,
       };
       const { data, error } = await supabase
         .from("events")
@@ -699,7 +721,7 @@ function CreateEventDialog({
         <EventFormFields
           values={{
             name, date, photoCount, description, printLayout,
-            overlayType, logoPosition, logoSize, requireCode,
+            overlayType, logoPosition, logoSize, requireCode, instagramUrl,
             frame, logo, bg, framePreview, logoPreview, bgPreview,
           }}
           onChange={(p) => {
@@ -712,6 +734,7 @@ function CreateEventDialog({
             if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
             if (p.logoSize !== undefined) setLogoSize(p.logoSize);
             if (p.requireCode !== undefined) setRequireCode(p.requireCode);
+            if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
             if (p.frame !== undefined) setFrame(p.frame);
             if (p.logo !== undefined) setLogo(p.logo);
             if (p.bg !== undefined) setBg(p.bg);
@@ -741,6 +764,7 @@ function EditEventDialog({
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("bottom");
   const [logoSize, setLogoSize] = useState<number>(25);
   const [requireCode, setRequireCode] = useState<boolean>(true);
+  const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [frame, setFrame] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
@@ -760,6 +784,7 @@ function EditEventDialog({
     setLogoPosition(event.logo_position ?? "bottom");
     setLogoSize(event.logo_size ?? 25);
     setRequireCode(event.requires_code ?? true);
+    setInstagramUrl(event.instagram_filter_url ?? "");
     setFrame(null);
     setLogo(null);
     setBg(null);
@@ -814,6 +839,7 @@ function EditEventDialog({
         logo_position: logoPosition,
         logo_size: logoSize,
         requires_code: requireCode,
+        instagram_filter_url: instagramUrl.trim() || null,
       };
       const existingCode = eventAccessCode(event);
       let nextCode: string | null | undefined = undefined;
@@ -862,7 +888,7 @@ function EditEventDialog({
           <EventFormFields
             values={{
               name, date, photoCount, description, printLayout,
-              overlayType, logoPosition, logoSize, requireCode,
+              overlayType, logoPosition, logoSize, requireCode, instagramUrl,
               frame, logo, bg, framePreview, logoPreview, bgPreview,
               existingFrameUrl: event?.frame_url ?? null,
               existingLogoUrl: event?.logo_url ?? null,
@@ -878,6 +904,7 @@ function EditEventDialog({
               if (p.logoPosition !== undefined) setLogoPosition(p.logoPosition);
               if (p.logoSize !== undefined) setLogoSize(p.logoSize);
               if (p.requireCode !== undefined) setRequireCode(p.requireCode);
+              if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
               if (p.frame !== undefined) setFrame(p.frame);
               if (p.logo !== undefined) setLogo(p.logo);
               if (p.bg !== undefined) setBg(p.bg);
@@ -1011,6 +1038,24 @@ function ShareDialog({
             }}
           >
             <Download className="size-4" /> Baixar QR Code
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            className="w-full rounded-full gap-2"
+            disabled={!qr || !event}
+            onClick={() => {
+              if (!qr || !event) return;
+              downloadEventCardPdf({
+                qrDataUrl: qr,
+                eventName: event.name,
+                url,
+                code: codeToShow,
+              });
+            }}
+          >
+            <FileText className="size-4" /> Baixar cartão A4 para impressão
           </Button>
         </div>
       </DialogContent>

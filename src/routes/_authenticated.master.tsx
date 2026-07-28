@@ -2,8 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadAndSign } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, ShieldCheck, Lock, Unlock, Users, Image as ImageIcon, Eye, Download as DownloadIcon, Calendar } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Loader2, ShieldCheck, Lock, Unlock, Users, Image as ImageIcon, Eye, Download as DownloadIcon, Calendar, Trash2, Upload, Frame } from "lucide-react";
 import { toast } from "sonner";
 import xisLogo from "@/assets/xis-logo.png.asset.json";
 
@@ -188,8 +191,111 @@ function MasterDashboard() {
             </article>
           ))}
         </div>
+        <GenericFramesLibrary userId={user.id} />
       </main>
     </div>
+  );
+}
+
+type GenericFrame = { id: string; name: string; image_url: string; created_at: string };
+
+function GenericFramesLibrary({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const framesQ = useQuery({
+    queryKey: ["generic_frames"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("generic_frames")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as GenericFrame[];
+    },
+  });
+
+  const delMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("generic_frames").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Moldura removida");
+      qc.invalidateQueries({ queryKey: ["generic_frames"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  async function upload(e: React.FormEvent) {
+    e.preventDefault();
+    if (!file || !name.trim()) return toast.error("Informe nome e arquivo");
+    setBusy(true);
+    try {
+      const url = await uploadAndSign("generic-frames" as never, `${Date.now()}-${file.name}`, file, file.type);
+      const { error } = await supabase.from("generic_frames").insert({
+        name: name.trim(), image_url: url, created_by: userId,
+      } as never);
+      if (error) throw error;
+      toast.success("Moldura enviada");
+      setName(""); setFile(null);
+      qc.invalidateQueries({ queryKey: ["generic_frames"] });
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  }
+
+  const frames = framesQ.data ?? [];
+
+  return (
+    <section className="mt-12">
+      <h2 className="font-display text-2xl font-bold mb-1 flex items-center gap-2">
+        <Frame className="size-5 text-primary" /> Biblioteca de molduras
+      </h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        Molduras genéricas disponíveis para todos os administradores usarem nos seus eventos.
+      </p>
+
+      <form onSubmit={upload} className="card-soft p-4 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end mb-5">
+        <div className="space-y-1.5">
+          <Label htmlFor="frame-name">Nome</Label>
+          <Input id="frame-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Casamento clássico" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="frame-file">Arquivo PNG</Label>
+          <Input id="frame-file" type="file" accept="image/png,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        </div>
+        <Button type="submit" disabled={busy} className="rounded-full gap-2">
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+          Enviar
+        </Button>
+      </form>
+
+      {framesQ.isLoading ? (
+        <div className="grid place-items-center py-10"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
+      ) : frames.length === 0 ? (
+        <div className="card-soft p-8 text-center text-sm text-muted-foreground">Nenhuma moldura na biblioteca ainda.</div>
+      ) : (
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+          {frames.map((f) => (
+            <article key={f.id} className="card-soft overflow-hidden">
+              <div className="aspect-square bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))] relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={f.image_url} alt={f.name} className="absolute inset-0 size-full object-contain p-2" />
+              </div>
+              <div className="p-3 flex items-center gap-2">
+                <div className="flex-1 min-w-0 truncate text-sm font-semibold">{f.name}</div>
+                <Button size="icon" variant="ghost" className="rounded-full size-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => { if (confirm(`Remover "${f.name}"?`)) delMut.mutate(f.id); }}>
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

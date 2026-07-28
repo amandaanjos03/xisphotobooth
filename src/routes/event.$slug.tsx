@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   Camera, Printer, Download, RotateCcw, Loader2,
   ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
-  RefreshCw, Maximize2, Minimize2, Video, Square, Play,
+  RefreshCw, Maximize2, Minimize2, Video, Square, Play, Instagram,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
@@ -33,6 +33,7 @@ type EventRow = {
   logo_position: LogoPosition;
   logo_size: number;
   requires_code: boolean;
+  instagram_filter_url: string | null;
 };
 
 export const Route = createFileRoute("/event/$slug")({
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code")
+      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code, instagram_filter_url")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
@@ -346,6 +347,16 @@ function Welcome({
             <Upload className="size-4" /> Enviar Foto ou Vídeo
           </button>
         </div>
+        {event.instagram_filter_url && (
+          <a
+            href={event.instagram_filter_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCB045] px-6 py-3 text-base font-semibold text-white shadow-md transition active:scale-95 hover:opacity-95"
+          >
+            <Instagram className="size-4" /> Abrir filtro no Instagram
+          </a>
+        )}
       </div>
       <AlbumGrid event={event} />
     </div>

@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventSlugRouteImport } from './routes/event.$slug'
 import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated.master'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
+import { Route as EventSlugLiveRouteImport } from './routes/event.$slug.live'
 import { Route as EventSlugGalleryRouteImport } from './routes/event.$slug.gallery'
 import { Route as AuthenticatedAdminEventSlugRouteImport } from './routes/_authenticated.admin.event.$slug'
 
@@ -53,6 +54,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const EventSlugLiveRoute = EventSlugLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
+  getParentRoute: () => EventSlugRoute,
+} as any)
 const EventSlugGalleryRoute = EventSlugGalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/master': typeof AuthenticatedMasterRoute
   '/event/$slug': typeof EventSlugRouteWithChildren
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
+  '/event/$slug/live': typeof EventSlugLiveRoute
   '/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
 }
 export interface FileRoutesByTo {
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/master': typeof AuthenticatedMasterRoute
   '/event/$slug': typeof EventSlugRouteWithChildren
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
+  '/event/$slug/live': typeof EventSlugLiveRoute
   '/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
 }
 export interface FileRoutesById {
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/_authenticated/master': typeof AuthenticatedMasterRoute
   '/event/$slug': typeof EventSlugRouteWithChildren
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
+  '/event/$slug/live': typeof EventSlugLiveRoute
   '/_authenticated/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
 }
 export interface FileRouteTypes {
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/master'
     | '/event/$slug'
     | '/event/$slug/gallery'
+    | '/event/$slug/live'
     | '/admin/event/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/master'
     | '/event/$slug'
     | '/event/$slug/gallery'
+    | '/event/$slug/live'
     | '/admin/event/$slug'
   id:
     | '__root__'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/master'
     | '/event/$slug'
     | '/event/$slug/gallery'
+    | '/event/$slug/live'
     | '/_authenticated/admin/event/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -190,6 +202,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/event/$slug/live': {
+      id: '/event/$slug/live'
+      path: '/live'
+      fullPath: '/event/$slug/live'
+      preLoaderRoute: typeof EventSlugLiveRouteImport
+      parentRoute: typeof EventSlugRoute
+    }
     '/event/$slug/gallery': {
       id: '/event/$slug/gallery'
       path: '/gallery'
@@ -234,10 +253,12 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 interface EventSlugRouteChildren {
   EventSlugGalleryRoute: typeof EventSlugGalleryRoute
+  EventSlugLiveRoute: typeof EventSlugLiveRoute
 }
 
 const EventSlugRouteChildren: EventSlugRouteChildren = {
   EventSlugGalleryRoute: EventSlugGalleryRoute,
+  EventSlugLiveRoute: EventSlugLiveRoute,
 }
 
 const EventSlugRouteWithChildren = EventSlugRoute._addFileChildren(
@@ -254,13 +275,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
