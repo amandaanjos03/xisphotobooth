@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, ImageIcon, Camera, Download } from "lucide-react";
+import { ArrowLeft, Loader2, ImageIcon, Camera, Download, FileArchive, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto } from "@/components/PhotoViewer";
+import { downloadAsZip, downloadAlbumPdf } from "@/lib/exports";
 
 type EventRow = {
   id: string;
