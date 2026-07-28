@@ -62,7 +62,7 @@ function LiveSlideshow() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "photos", filter: `event_id=eq.${event.id}` },
         (payload) => {
-          const p = payload.new as PhotoRow;
+          const p = payload.new as PhotoRow & { hidden?: boolean };
           if (p.hidden || seenRef.current.has(p.id)) return;
           seenRef.current.add(p.id);
           setPhotos((prev) => [p, ...prev].slice(0, 200));

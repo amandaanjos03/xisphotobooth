@@ -108,34 +108,7 @@ function PublicGallery() {
                 <Camera className="size-4" /> Tirar novas fotos
               </Link>
             </Button>
-            <Button
-              variant="secondary"
-              className="rounded-full gap-2"
-              disabled={total === 0}
-              onClick={async () => {
-                toast.message(`Baixando ${total} foto${total === 1 ? "" : "s"}…`);
-                const all: { id: string; photo_url: string }[] = [];
-                const STEP = 200;
-                for (let from = 0; from < total; from += STEP) {
-                  const { data, error } = await supabase
-                    .from("photos")
-                    .select("id, photo_url")
-                    .eq("event_id", event.id)
-                    .eq("hidden", false)
-                    .order("created_at", { ascending: false })
-                    .range(from, from + STEP - 1);
-                  if (error) { toast.error(error.message); return; }
-                  all.push(...(data ?? []));
-                }
-                for (let i = 0; i < all.length; i++) {
-                  await downloadPhoto(all[i].photo_url, `${event.slug}-${i + 1}.jpg`);
-                  await new Promise((r) => setTimeout(r, 250));
-                }
-                toast.success("Download concluído");
-              }}
-            >
-              <Download className="size-4" /> Baixar todas
-            </Button>
+            <BulkActions eventId={event.id} eventSlug={event.slug} eventName={event.name} total={total} />
           </div>
         </div>
 
