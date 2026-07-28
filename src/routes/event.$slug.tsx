@@ -390,10 +390,50 @@ function Welcome({
           </a>
         )}
       </div>
+      {overlayOptions.length > 1 && (
+        <OverlayPicker options={overlayOptions} value={choiceIdx} onChange={onChoose} />
+      )}
       <AlbumGrid event={event} />
     </div>
   );
 }
+
+function OverlayPicker({
+  options, value, onChange,
+}: { options: OverlayChoice[]; value: number; onChange: (i: number) => void }) {
+  return (
+    <section className="mt-12 text-left">
+      <h2 className="font-display text-xl font-bold text-center">Escolha a moldura</h2>
+      <p className="text-center text-sm text-muted-foreground mt-1">Aplicada em fotos e vídeos.</p>
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {options.map((opt, i) => {
+          const active = i === value;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onChange(i)}
+              className={`card-soft overflow-hidden text-left transition active:scale-95 ${active ? "ring-2 ring-primary" : "opacity-90 hover:opacity-100"}`}
+            >
+              <div className="aspect-square bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))] relative grid place-items-center">
+                {opt.kind === "frame" ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={opt.frameUrl} alt={opt.label} className="absolute inset-0 size-full object-contain p-2" />
+                ) : opt.kind === "logo" ? (
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Somente logo</span>
+                ) : (
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Sem overlay</span>
+                )}
+              </div>
+              <div className="p-2 text-xs font-semibold truncate text-center">{opt.label}</div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 
 function AlbumGrid({ event }: { event: EventRow }) {
   const PAGE_SIZE = 12;
