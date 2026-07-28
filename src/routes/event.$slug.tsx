@@ -711,10 +711,12 @@ function CaptureFlow({
       ctx.translate(TARGET_W, 0);
       ctx.scale(-1, 1);
     }
+    const css = FILTERS[filter].css;
+    if (css !== "none") ctx.filter = css;
     ctx.drawImage(v, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
     ctx.restore();
     return canvas.toDataURL("image/jpeg", 0.92);
-  }, [mirror]);
+  }, [mirror, filter]);
 
   useEffect(() => {
     if (!ready || error) return;
