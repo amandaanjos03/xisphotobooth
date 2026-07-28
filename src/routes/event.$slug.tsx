@@ -823,6 +823,19 @@ function CaptureFlow({
         </div>
       </div>
 
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {(Object.keys(FILTERS) as LiveFilter[]).map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setFilter(k)}
+            className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider border transition ${filter === k ? "bg-primary text-primary-foreground border-primary" : "bg-background/70 border-border text-muted-foreground hover:bg-accent"}`}
+          >
+            {FILTERS[k].label}
+          </button>
+        ))}
+      </div>
+
       <div className="mt-4 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           {ready ? `Foto ${Math.min(shotIndex + 1, event.photo_count)} de ${event.photo_count}` : "Iniciando câmera…"}
