@@ -327,8 +327,16 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
 }
 
 function Welcome({
-  event, onStart, onUpload, onRecordVideo,
-}: { event: EventRow; onStart: () => void; onUpload: (src: UploadSource) => void; onRecordVideo: () => void }) {
+  event, overlayOptions, choiceIdx, onChoose, onStart, onUpload, onRecordVideo,
+}: {
+  event: EventRow;
+  overlayOptions: OverlayChoice[];
+  choiceIdx: number;
+  onChoose: (i: number) => void;
+  onStart: () => void;
+  onUpload: (src: UploadSource) => void;
+  onRecordVideo: () => void;
+}) {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-20 text-center">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
