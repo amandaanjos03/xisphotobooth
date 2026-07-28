@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_frames: {
+        Row: {
+          created_at: string
+          event_id: string
+          frame_url: string
+          id: string
+          name: string | null
+          position: number
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          frame_url: string
+          id?: string
+          name?: string | null
+          position?: number
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          frame_url?: string
+          id?: string
+          name?: string | null
+          position?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_frames_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_secrets: {
         Row: {
           access_code: string | null
@@ -52,6 +90,7 @@ export type Database = {
           download_count: number
           frame_url: string | null
           id: string
+          instagram_filter_url: string | null
           logo_position: string
           logo_size: number
           logo_url: string | null
@@ -72,6 +111,7 @@ export type Database = {
           download_count?: number
           frame_url?: string | null
           id?: string
+          instagram_filter_url?: string | null
           logo_position?: string
           logo_size?: number
           logo_url?: string | null
@@ -92,6 +132,7 @@ export type Database = {
           download_count?: number
           frame_url?: string | null
           id?: string
+          instagram_filter_url?: string | null
           logo_position?: string
           logo_size?: number
           logo_url?: string | null
@@ -103,6 +144,30 @@ export type Database = {
           requires_code?: boolean
           slug?: string
           view_count?: number
+        }
+        Relationships: []
+      }
+      generic_frames: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string
+          name?: string
         }
         Relationships: []
       }
