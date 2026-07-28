@@ -298,6 +298,8 @@ function GenericFramesLibrary({ userId }: { userId: string }) {
     </section>
   );
 }
+
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
     <div className="card-soft p-4">
       <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
