@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { refreshPhotoUrls } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Eye, EyeOff, Trash2, Loader2, ImageIcon, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
@@ -83,7 +84,7 @@ function AdminEventGallery() {
         .eq("event_id", event.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as PhotoRow[];
+      return refreshPhotoUrls(data as PhotoRow[]);
     },
   });
 
