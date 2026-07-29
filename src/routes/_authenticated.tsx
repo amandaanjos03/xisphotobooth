@@ -25,7 +25,6 @@ function AuthedLayout() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try { await supabase.rpc("claim_admin_role" as never); } catch { /* ignore */ }
       const { data, error } = await supabase
         .from("user_roles")
         .select("role, blocked")
@@ -81,8 +80,8 @@ function AuthedLayout() {
         <div className="card-soft p-8 max-w-md text-center">
           <h1 className="font-display text-2xl font-bold">Acesso de administrador necessário</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sua conta ({user.email}) está conectada, mas não é administradora. Peça a um admin
-            existente para conceder essa permissão.
+            Sua conta ({user.email}) está conectada, mas ainda não foi aprovada como
+            administradora. Peça ao administrador master para liberar seu acesso.
           </p>
           <div className="mt-6 flex gap-2 justify-center">
             <Button asChild variant="secondary" className="rounded-full">
