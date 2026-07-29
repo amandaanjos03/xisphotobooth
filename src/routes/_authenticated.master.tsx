@@ -49,6 +49,29 @@ function MasterDashboard() {
     },
   });
 
+  const pendingQ = useQuery({
+    queryKey: ["master", "pending"],
+    enabled: allowed === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("list_pending_users" as never);
+      if (error) throw error;
+      return (data ?? []) as { user_id: string; email: string; created_at: string }[];
+    },
+  });
+
+  const roleMut = useMutation({
+    mutationFn: async (vars: { uid: string; grant: boolean }) => {
+      const { error } = await supabase.rpc("set_admin_role" as never, { _user_id: vars.uid, _grant: vars.grant } as never);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.grant ? "Acesso de administrador concedido" : "Acesso removido");
+      qc.invalidateQueries({ queryKey: ["master", "admins"] });
+      qc.invalidateQueries({ queryKey: ["master", "pending"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const settingsQ = useQuery({
     queryKey: ["platform_settings"],
     queryFn: async () => {
@@ -155,6 +178,35 @@ function MasterDashboard() {
           </Button>
         </div>
 
+        <h2 className="font-display text-2xl font-bold mt-10 mb-4">Contas aguardando aprovação</h2>
+        <p className="-mt-3 mb-4 text-sm text-muted-foreground">
+          Novas contas não recebem permissão automaticamente. Aprove aqui quem pode criar eventos.
+        </p>
+        {pendingQ.isLoading && <div className="grid place-items-center py-6"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>}
+        {pendingQ.data?.length === 0 && (
+          <div className="card-soft p-4 text-sm text-muted-foreground">Nenhuma conta pendente.</div>
+        )}
+        <div className="grid gap-3">
+          {(pendingQ.data ?? []).map((u) => (
+            <article key={u.user_id} className="card-soft p-4 flex items-center gap-3 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
+                <div className="font-display font-bold">{u.email}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Criada em {new Date(u.created_at).toLocaleDateString("pt-BR")}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="rounded-full gap-1.5"
+                disabled={roleMut.isPending}
+                onClick={() => roleMut.mutate({ uid: u.user_id, grant: true })}
+              >
+                <ShieldCheck className="size-3.5" /> Aprovar como admin
+              </Button>
+            </article>
+          ))}
+        </div>
+
         <h2 className="font-display text-2xl font-bold mt-10 mb-4">Administradores</h2>
         {adminsQ.isLoading && <div className="grid place-items-center py-10"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}
 
@@ -186,6 +238,17 @@ function MasterDashboard() {
                   onClick={() => blockMut.mutate({ uid: a.user_id, blocked: !a.blocked })}
                 >
                   {a.blocked ? <><Unlock className="size-3.5" /> Desbloquear</> : <><Lock className="size-3.5" /> Bloquear</>}
+                </Button>
+              )}
+              {!a.is_master && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-full gap-1.5 text-destructive"
+                  disabled={roleMut.isPending}
+                  onClick={() => roleMut.mutate({ uid: a.user_id, grant: false })}
+                >
+                  <Trash2 className="size-3.5" /> Remover admin
                 </Button>
               )}
             </article>
