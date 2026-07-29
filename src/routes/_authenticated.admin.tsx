@@ -1057,6 +1057,57 @@ function ShareDialog({
           >
             <FileText className="size-4" /> Baixar cartão A4 para impressão
           </Button>
+
+          <div className="w-full rounded-2xl border border-border bg-muted/30 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <MonitorPlay className="size-4 text-primary" /> Apresentação ao vivo
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Projete este link em um telão ou TV: as fotos do evento aparecem automaticamente conforme são tiradas.
+            </p>
+            <div className="flex items-center gap-2 rounded-full border border-input bg-background px-3 py-1.5">
+              <span className="truncate text-xs text-muted-foreground flex-1">{liveUrl}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full gap-1.5"
+                onClick={copyLive}
+              >
+                {liveCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                {liveCopied ? "Copiado" : "Copiar"}
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="flex-1 rounded-full gap-2"
+                disabled={!event}
+                onClick={() => window.open(liveUrl, "_blank", "noopener")}
+              >
+                <ExternalLink className="size-4" /> Abrir apresentação
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="flex-1 rounded-full gap-2"
+                disabled={!liveQr}
+                onClick={() => {
+                  if (!liveQr) return;
+                  const a = document.createElement("a");
+                  a.href = liveQr;
+                  a.download = `qr-apresentacao-${event?.slug ?? "evento"}.png`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                }}
+              >
+                <Download className="size-4" /> QR do telão
+              </Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
