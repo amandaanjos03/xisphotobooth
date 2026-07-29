@@ -1,6 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { refreshPhotoUrls } from "@/lib/storage";
 import { Loader2 } from "lucide-react";
 
 type EventRow = { id: string; name: string; slug: string; bg_url: string | null };
@@ -47,7 +48,7 @@ function LiveSlideshow() {
         .eq("hidden", false)
         .order("created_at", { ascending: false })
         .limit(100);
-      const rows = (data ?? []) as PhotoRow[];
+      const rows = await refreshPhotoUrls((data ?? []) as PhotoRow[]);
       rows.forEach((p) => seenRef.current.add(p.id));
       setPhotos(rows);
       setLoading(false);
@@ -65,8 +66,10 @@ function LiveSlideshow() {
           const p = payload.new as PhotoRow & { hidden?: boolean };
           if (p.hidden || seenRef.current.has(p.id)) return;
           seenRef.current.add(p.id);
-          setPhotos((prev) => [p, ...prev].slice(0, 200));
-          setIdx(0);
+          refreshPhotoUrls([p]).then(([fresh]) => {
+            setPhotos((prev) => [fresh ?? p, ...prev].slice(0, 200));
+            setIdx(0);
+          });
         },
       )
       .subscribe();

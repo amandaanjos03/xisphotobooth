@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { refreshPhotoUrls } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, ImageIcon, Camera, Download, FileArchive, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -73,7 +74,7 @@ function PublicGallery() {
         .order("created_at", { ascending: false })
         .range(from, to);
       if (error) throw error;
-      return { rows: (data ?? []) as PhotoRow[], count: count ?? 0 };
+      return { rows: await refreshPhotoUrls((data ?? []) as PhotoRow[]), count: count ?? 0 };
     },
   });
 
