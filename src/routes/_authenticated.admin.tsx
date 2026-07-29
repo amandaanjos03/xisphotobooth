@@ -15,7 +15,7 @@ import {
 import {
   Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
   ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
-  CopyPlus, Eye, ShieldCheck, Instagram, FileText,
+  CopyPlus, Eye, ShieldCheck, Instagram, FileText, MonitorPlay,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
