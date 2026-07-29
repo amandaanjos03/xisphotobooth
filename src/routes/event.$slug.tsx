@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { uploadAndSign } from "@/lib/storage";
+import { uploadAndSign, refreshPhotoUrls } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,6 +101,34 @@ type MediaType = "image" | "video";
 
 const ACCESS_KEY_PREFIX = "xis:access:";
 
+/**
+ * Short-lived access pass proving the guest cleared the event's code gate.
+ * Required by RLS/storage policies for any upload to this event.
+ */
+let accessToken: string | null = null;
+function setAccessToken(slug: string, token: string | null) {
+  accessToken = token;
+  if (typeof window === "undefined") return;
+  if (token) window.sessionStorage.setItem(ACCESS_KEY_PREFIX + slug, token);
+  else window.sessionStorage.removeItem(ACCESS_KEY_PREFIX + slug);
+}
+async function issueAccess(slug: string, code?: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc(
+    "issue_event_access" as never,
+    { _slug: slug, _code: code ?? null } as never,
+  );
+  if (error) throw error;
+  const token = (data as string | null) ?? null;
+  if (token) setAccessToken(slug, token);
+  return token;
+}
+function requireAccessToken(): string {
+  if (!accessToken) {
+    throw new Error("Sessão expirada. Recarregue a página e informe a senha do evento novamente.");
+  }
+  return accessToken;
+}
+
 function buildOverlayOptions(event: EventRow, extras: ExtraFrame[]): OverlayChoice[] {
   const opts: OverlayChoice[] = [];
   if (event.frame_url) opts.push({ kind: "frame", frameUrl: event.frame_url, label: "Moldura principal" });
@@ -145,16 +173,15 @@ function BoothPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!event.requires_code) { setUnlocked(true); setCheckingAuth(false); return; }
-    if (window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug) === "1") { setUnlocked(true); setCheckingAuth(false); return; }
     let cancelled = false;
+    const stored = window.sessionStorage.getItem(ACCESS_KEY_PREFIX + event.slug);
+    if (stored) accessToken = stored;
     (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!cancelled && userData.user) {
-        const { data: roleRow } = await supabase
-          .from("user_roles").select("role").eq("user_id", userData.user.id).eq("role", "admin").maybeSingle();
-        if (!cancelled && roleRow) setUnlocked(true);
-      }
+      try {
+        // Server decides: no code required, or the caller owns/masters the event.
+        const token = await issueAccess(event.slug);
+        if (!cancelled && token) setUnlocked(true);
+      } catch { /* falls back to the code gate */ }
       if (!cancelled) setCheckingAuth(false);
     })();
     return () => { cancelled = true; };
@@ -280,17 +307,14 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
     e.preventDefault();
     if (!code.trim()) return;
     setBusy(true);
-    const { data, error } = await supabase.rpc(
-      "verify_event_code" as never,
-      { _slug: event.slug, _code: code.trim() } as never,
-    );
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    if (data === true) {
-      window.sessionStorage.setItem(ACCESS_KEY_PREFIX + event.slug, "1");
-      onUnlock();
-    } else {
-      toast.error("Senha incorreta. Confira com o anfitrião do evento.");
+    try {
+      const token = await issueAccess(event.slug, code.trim());
+      setBusy(false);
+      if (token) onUnlock();
+      else toast.error("Senha incorreta. Confira com o anfitrião do evento.");
+    } catch (err) {
+      setBusy(false);
+      toast.error((err as Error).message);
     }
   }
 
@@ -451,7 +475,7 @@ function AlbumGrid({ event }: { event: EventRow }) {
         .eq("hidden", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as { id: string; photo_url: string; media_type: MediaType }[];
+      return refreshPhotoUrls(data as { id: string; photo_url: string; media_type: MediaType }[]);
     },
     refetchOnWindowFocus: false,
   });
@@ -621,11 +645,12 @@ async function finalizeAndUpload(
   count: number,
 ): Promise<{ id: string; url: string }> {
   const blob = await composeStrip(shots, event, count);
-  const path = `${event.slug}/${Date.now()}.jpg`;
+  const token = requireAccessToken();
+  const path = `${token}/${Date.now()}.jpg`;
   const url = await uploadAndSign("event-photos", path, blob, "image/jpeg");
   const { data, error } = await supabase
     .from("photos")
-    .insert({ event_id: event.id, photo_url: url })
+    .insert({ event_id: event.id, photo_url: url, access_token: token } as never)
     .select("id")
     .single();
   if (error) throw error;
@@ -1015,11 +1040,12 @@ async function uploadVideoAndInsert(
   ext?: string,
 ): Promise<{ id: string; url: string }> {
   const fileExt = ext ?? (file.type.includes("webm") ? "webm" : "mp4");
-  const path = `${event.slug}/${Date.now()}.${fileExt}`;
+  const token = requireAccessToken();
+  const path = `${token}/${Date.now()}.${fileExt}`;
   const url = await uploadAndSign("event-photos", path, file, file.type || "video/mp4");
   const { data, error } = await supabase
     .from("photos")
-    .insert({ event_id: event.id, photo_url: url, media_type: "video" } as never)
+    .insert({ event_id: event.id, photo_url: url, media_type: "video", access_token: token } as never)
     .select("id")
     .single();
   if (error) throw error;
