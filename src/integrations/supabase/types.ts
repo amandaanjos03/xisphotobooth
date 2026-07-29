@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_access_tokens: {
+        Row: {
+          created_at: string
+          event_id: string
+          expires_at: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          expires_at?: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          expires_at?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_access_tokens_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_frames: {
         Row: {
           created_at: string
@@ -173,6 +202,7 @@ export type Database = {
       }
       photos: {
         Row: {
+          access_token: string | null
           created_at: string
           event_id: string
           hidden: boolean
@@ -181,6 +211,7 @@ export type Database = {
           photo_url: string
         }
         Insert: {
+          access_token?: string | null
           created_at?: string
           event_id: string
           hidden?: boolean
@@ -189,6 +220,7 @@ export type Database = {
           photo_url: string
         }
         Update: {
+          access_token?: string | null
           created_at?: string
           event_id?: string
           hidden?: boolean
@@ -268,7 +300,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      claim_admin_role: { Args: never; Returns: undefined }
+      has_event_access: {
+        Args: { _event_id: string; _token: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -283,6 +318,10 @@ export type Database = {
       }
       increment_event_view: { Args: { _slug: string }; Returns: undefined }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      issue_event_access: {
+        Args: { _code?: string; _slug: string }
+        Returns: string
+      }
       list_admin_users: {
         Args: never
         Returns: {
@@ -297,11 +336,24 @@ export type Database = {
           view_count: number
         }[]
       }
+      list_pending_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          user_id: string
+        }[]
+      }
       set_admin_blocked: {
         Args: { _blocked: boolean; _user_id: string }
         Returns: undefined
       }
+      set_admin_role: {
+        Args: { _grant: boolean; _user_id: string }
+        Returns: undefined
+      }
       set_allow_signups: { Args: { _allow: boolean }; Returns: undefined }
+      storage_path_has_access: { Args: { _name: string }; Returns: boolean }
       verify_event_code: {
         Args: { _code: string; _slug: string }
         Returns: boolean
