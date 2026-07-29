@@ -939,10 +939,13 @@ function ShareDialog({
   event, accessCode, onClose,
 }: { event: EventRow | null; accessCode?: string; onClose: () => void }) {
   const [qr, setQr] = useState<string | null>(null);
+  const [liveQr, setLiveQr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [liveCopied, setLiveCopied] = useState(false);
   const url = event && typeof window !== "undefined"
     ? `${window.location.origin}/event/${event.slug}`
     : "";
+  const liveUrl = url ? `${url}/live` : "";
   const codeToShow = accessCode ?? eventAccessCode(event) ?? null;
 
   useEffect(() => {
@@ -950,7 +953,22 @@ function ShareDialog({
     QRCode.toDataURL(url, { width: 512, margin: 1, color: { dark: "#0e524a", light: "#ffffff" } })
       .then(setQr)
       .catch(() => setQr(null));
+    QRCode.toDataURL(`${url}/live`, { width: 512, margin: 1, color: { dark: "#0e524a", light: "#ffffff" } })
+      .then(setLiveQr)
+      .catch(() => setLiveQr(null));
   }, [event, url]);
+
+  async function copyLive() {
+    try {
+      await navigator.clipboard.writeText(liveUrl);
+      setLiveCopied(true);
+      toast.success("Link da apresentação copiado");
+      setTimeout(() => setLiveCopied(false), 1800);
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  }
+
 
   async function copyAll() {
     const text = codeToShow
