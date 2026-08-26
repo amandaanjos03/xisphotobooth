@@ -49,6 +49,9 @@ type EventRow = {
   instagram_filter_url: string | null;
 };
 
+type GenericFrameRow = { id: string; name: string; image_url: string };
+type EventFrameRow = { id: string; frame_url: string; name: string | null; source: string; position: number };
+
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
   portrait: "10x15 Retrato",
   landscape: "10x15 Paisagem",
@@ -161,6 +164,18 @@ function AdminDashboard() {
         .single();
       if (error) throw error;
       const created = data as unknown as EventRow;
+      const { data: sourceFrames, error: sourceFramesError } = await supabase
+        .from("event_frames")
+        .select("frame_url, name, source, position")
+        .eq("event_id", ev.id)
+        .order("position", { ascending: true });
+      if (sourceFramesError) throw sourceFramesError;
+      if (sourceFrames?.length) {
+        const { error: copyFramesError } = await supabase.from("event_frames").insert(
+          sourceFrames.map((frame) => ({ ...frame, event_id: created.id })) as never,
+        );
+        if (copyFramesError) throw copyFramesError;
+      }
       if (newCode) {
         await supabase.from("event_secrets").insert({ event_id: created.id, access_code: newCode } as never);
       }
@@ -383,6 +398,9 @@ function EventFormFields({
     requireCode: boolean;
     instagramUrl: string;
     frame: File | null;
+    extraFrameFiles: File[];
+    selectedGenericFrameIds: string[];
+    existingExtraFrames?: EventFrameRow[];
     logo: File | null;
     bg: File | null;
     framePreview: string | null;
@@ -394,6 +412,18 @@ function EventFormFields({
   };
   onChange: (patch: Partial<typeof values>) => void;
 }) {
+  const genericFramesQ = useQuery({
+    queryKey: ["generic_frames", "event-form"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("generic_frames")
+        .select("id, name, image_url")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as GenericFrameRow[];
+    },
+  });
+
   return (
     <>
       <div className="space-y-2">
@@ -499,18 +529,90 @@ function EventFormFields({
       </div>
 
       {values.overlayType === "frame" ? (
-        <div className="space-y-2">
-          <Label htmlFor="frame">Moldura (PNG transparente)</Label>
-          <Input
-            id="frame"
-            type="file"
-            accept="image/png,image/webp"
-            onChange={(e) => onChange({ frame: e.target.files?.[0] ?? null })}
-          />
-          {(values.framePreview || values.existingFrameUrl) && (
-            <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={values.framePreview ?? values.existingFrameUrl ?? ""} alt="Moldura" className="size-full object-contain" />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="frame">Moldura principal (PNG transparente)</Label>
+            <Input
+              id="frame"
+              type="file"
+              accept="image/png,image/webp"
+              onChange={(e) => onChange({ frame: e.target.files?.[0] ?? null })}
+            />
+            {(values.framePreview || values.existingFrameUrl) && (
+              <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={values.framePreview ?? values.existingFrameUrl ?? ""} alt="Moldura principal" className="size-full object-contain" />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="extra-frames">Molduras adicionais</Label>
+            <Input
+              id="extra-frames"
+              type="file"
+              accept="image/png,image/webp"
+              multiple
+              onChange={(e) => onChange({ extraFrameFiles: Array.from(e.target.files ?? []) })}
+            />
+            <p className="text-xs text-muted-foreground">Selecione vários arquivos de uma vez. O convidado poderá escolher entre todas as molduras.</p>
+            {values.extraFrameFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {values.extraFrameFiles.map((file, index) => (
+                  <span key={`${file.name}-${index}`} className="rounded-full border border-border bg-muted px-2.5 py-1">{file.name}</span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {(values.existingExtraFrames?.length ?? 0) > 0 && (
+            <div className="space-y-2">
+              <Label>Molduras já adicionadas</Label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {values.existingExtraFrames?.map((frame) => (
+                  <div key={frame.id} className="relative overflow-hidden rounded-md border border-border bg-muted aspect-square">
+                    <img src={frame.frame_url} alt={frame.name ?? "Moldura"} className="size-full object-contain p-1" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute right-1 top-1 size-7 rounded-full"
+                      title="Remover moldura"
+                      onClick={() => onChange({ existingExtraFrames: values.existingExtraFrames?.filter((item) => item.id !== frame.id) ?? [] })}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(genericFramesQ.data?.length ?? 0) > 0 && (
+            <div className="space-y-2">
+              <Label>Biblioteca de molduras</Label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {genericFramesQ.data?.map((genericFrame) => {
+                  const selected = values.selectedGenericFrameIds.includes(genericFrame.id);
+                  return (
+                    <Button
+                      key={genericFrame.id}
+                      type="button"
+                      variant={selected ? "default" : "outline"}
+                      className="h-auto min-h-28 flex-col gap-2 p-2"
+                      onClick={() => onChange({
+                        selectedGenericFrameIds: selected
+                          ? values.selectedGenericFrameIds.filter((id) => id !== genericFrame.id)
+                          : [...values.selectedGenericFrameIds, genericFrame.id],
+                      })}
+                    >
+                      <img src={genericFrame.image_url} alt="" className="h-20 w-full object-contain" />
+                      <span className="w-full truncate text-xs">{genericFrame.name}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">Toque para selecionar ou desmarcar quantas molduras desejar.</p>
             </div>
           )}
         </div>
@@ -620,6 +722,8 @@ function CreateEventDialog({
   const [requireCode, setRequireCode] = useState<boolean>(true);
   const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [frame, setFrame] = useState<File | null>(null);
+  const [extraFrameFiles, setExtraFrameFiles] = useState<File[]>([]);
+  const [selectedGenericFrameIds, setSelectedGenericFrameIds] = useState<string[]>([]);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
   const [framePreview, setFramePreview] = useState<string | null>(null);
@@ -692,6 +796,29 @@ function CreateEventDialog({
         .single();
       if (error) throw error;
       const created = data as unknown as EventRow;
+      const { data: genericFrames, error: genericFramesError } = selectedGenericFrameIds.length
+        ? await supabase.from("generic_frames").select("id, name, image_url").in("id", selectedGenericFrameIds)
+        : { data: [], error: null };
+      if (genericFramesError) throw genericFramesError;
+      const uploadedExtraFrames = await Promise.all(extraFrameFiles.map(async (extraFrame, position) => ({
+        event_id: created.id,
+        frame_url: await uploadAndSign("event-frames", `${slug}/extra-${Date.now()}-${position}-${extraFrame.name}`, extraFrame, extraFrame.type),
+        name: extraFrame.name.replace(/\.[^.]+$/, ""),
+        source: "custom",
+        position,
+      })));
+      const libraryExtraFrames = (genericFrames ?? []).map((genericFrame, index) => ({
+        event_id: created.id,
+        frame_url: genericFrame.image_url,
+        name: genericFrame.name,
+        source: "generic",
+        position: uploadedExtraFrames.length + index,
+      }));
+      const allExtraFrames = [...uploadedExtraFrames, ...libraryExtraFrames];
+      if (allExtraFrames.length) {
+        const { error: framesError } = await supabase.from("event_frames").insert(allExtraFrames as never);
+        if (framesError) throw framesError;
+      }
       if (code) {
         const { error: secErr } = await supabase
           .from("event_secrets")
@@ -723,6 +850,7 @@ function CreateEventDialog({
             name, date, photoCount, description, printLayout,
             overlayType, logoPosition, logoSize, requireCode, instagramUrl,
             frame, logo, bg, framePreview, logoPreview, bgPreview,
+            extraFrameFiles, selectedGenericFrameIds,
           }}
           onChange={(p) => {
             if (p.name !== undefined) setName(p.name);
@@ -736,6 +864,8 @@ function CreateEventDialog({
             if (p.requireCode !== undefined) setRequireCode(p.requireCode);
             if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
             if (p.frame !== undefined) setFrame(p.frame);
+            if (p.extraFrameFiles !== undefined) setExtraFrameFiles(p.extraFrameFiles);
+            if (p.selectedGenericFrameIds !== undefined) setSelectedGenericFrameIds(p.selectedGenericFrameIds);
             if (p.logo !== undefined) setLogo(p.logo);
             if (p.bg !== undefined) setBg(p.bg);
           }}
@@ -766,6 +896,10 @@ function EditEventDialog({
   const [requireCode, setRequireCode] = useState<boolean>(true);
   const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [frame, setFrame] = useState<File | null>(null);
+  const [extraFrameFiles, setExtraFrameFiles] = useState<File[]>([]);
+  const [selectedGenericFrameIds, setSelectedGenericFrameIds] = useState<string[]>([]);
+  const [existingExtraFrames, setExistingExtraFrames] = useState<EventFrameRow[]>([]);
+  const [originalExtraFrameIds, setOriginalExtraFrameIds] = useState<string[]>([]);
   const [logo, setLogo] = useState<File | null>(null);
   const [bg, setBg] = useState<File | null>(null);
   const [framePreview, setFramePreview] = useState<string | null>(null);
@@ -786,8 +920,24 @@ function EditEventDialog({
     setRequireCode(event.requires_code ?? true);
     setInstagramUrl(event.instagram_filter_url ?? "");
     setFrame(null);
+    setExtraFrameFiles([]);
+    setSelectedGenericFrameIds([]);
     setLogo(null);
     setBg(null);
+    supabase
+      .from("event_frames")
+      .select("id, frame_url, name, source, position")
+      .eq("event_id", event.id)
+      .order("position", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error("Não foi possível carregar as molduras adicionais");
+          return;
+        }
+        const frames = (data ?? []) as EventFrameRow[];
+        setExistingExtraFrames(frames);
+        setOriginalExtraFrameIds(frames.map((item) => item.id));
+      });
   }, [event]);
 
   useEffect(() => {
@@ -859,6 +1009,35 @@ function EditEventDialog({
       }
       const { error } = await supabase.from("events").update(patch as never).eq("id", event.id);
       if (error) throw error;
+      const removedFrameIds = originalExtraFrameIds.filter((id) => !existingExtraFrames.some((item) => item.id === id));
+      if (removedFrameIds.length) {
+        const { error: removeFramesError } = await supabase.from("event_frames").delete().in("id", removedFrameIds);
+        if (removeFramesError) throw removeFramesError;
+      }
+      const { data: genericFrames, error: genericFramesError } = selectedGenericFrameIds.length
+        ? await supabase.from("generic_frames").select("id, name, image_url").in("id", selectedGenericFrameIds)
+        : { data: [], error: null };
+      if (genericFramesError) throw genericFramesError;
+      const startPosition = existingExtraFrames.length;
+      const uploadedExtraFrames = await Promise.all(extraFrameFiles.map(async (extraFrame, index) => ({
+        event_id: event.id,
+        frame_url: await uploadAndSign("event-frames", `${event.slug}/extra-${Date.now()}-${index}-${extraFrame.name}`, extraFrame, extraFrame.type),
+        name: extraFrame.name.replace(/\.[^.]+$/, ""),
+        source: "custom",
+        position: startPosition + index,
+      })));
+      const libraryExtraFrames = (genericFrames ?? []).map((genericFrame, index) => ({
+        event_id: event.id,
+        frame_url: genericFrame.image_url,
+        name: genericFrame.name,
+        source: "generic",
+        position: startPosition + uploadedExtraFrames.length + index,
+      }));
+      const newExtraFrames = [...uploadedExtraFrames, ...libraryExtraFrames];
+      if (newExtraFrames.length) {
+        const { error: framesError } = await supabase.from("event_frames").insert(newExtraFrames as never);
+        if (framesError) throw framesError;
+      }
       if (nextCode === null) {
         await supabase.from("event_secrets").delete().eq("event_id", event.id);
       } else if (typeof nextCode === "string") {
@@ -890,6 +1069,7 @@ function EditEventDialog({
               name, date, photoCount, description, printLayout,
               overlayType, logoPosition, logoSize, requireCode, instagramUrl,
               frame, logo, bg, framePreview, logoPreview, bgPreview,
+              extraFrameFiles, selectedGenericFrameIds, existingExtraFrames,
               existingFrameUrl: event?.frame_url ?? null,
               existingLogoUrl: event?.logo_url ?? null,
               existingBgUrl: event?.bg_url ?? null,
@@ -906,6 +1086,9 @@ function EditEventDialog({
               if (p.requireCode !== undefined) setRequireCode(p.requireCode);
               if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
               if (p.frame !== undefined) setFrame(p.frame);
+              if (p.extraFrameFiles !== undefined) setExtraFrameFiles(p.extraFrameFiles);
+              if (p.selectedGenericFrameIds !== undefined) setSelectedGenericFrameIds(p.selectedGenericFrameIds);
+              if (p.existingExtraFrames !== undefined) setExistingExtraFrames(p.existingExtraFrames);
               if (p.logo !== undefined) setLogo(p.logo);
               if (p.bg !== undefined) setBg(p.bg);
             }}
