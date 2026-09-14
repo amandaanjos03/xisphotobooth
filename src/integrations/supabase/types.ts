@@ -113,6 +113,8 @@ export type Database = {
       events: {
         Row: {
           bg_url: string | null
+          card_logo_url: string | null
+          card_text: string | null
           created_at: string
           date: string | null
           description: string | null
@@ -135,6 +137,8 @@ export type Database = {
         }
         Insert: {
           bg_url?: string | null
+          card_logo_url?: string | null
+          card_text?: string | null
           created_at?: string
           date?: string | null
           description?: string | null
@@ -157,6 +161,8 @@ export type Database = {
         }
         Update: {
           bg_url?: string | null
+          card_logo_url?: string | null
+          card_text?: string | null
           created_at?: string
           date?: string | null
           description?: string | null
