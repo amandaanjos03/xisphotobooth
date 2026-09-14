@@ -76,6 +76,7 @@ type EventRow = {
   theme_slug: EventThemeSlug;
   card_text: string | null;
   card_logo_url: string | null;
+  slideshow_interval_seconds: number;
 };
 
 type GenericFrameRow = { id: string; name: string; image_url: string };
@@ -195,6 +196,7 @@ function AdminDashboard() {
         theme_slug: normalizeEventTheme(ev.theme_slug),
         card_text: ev.card_text,
         card_logo_url: ev.card_logo_url,
+        slideshow_interval_seconds: ev.slideshow_interval_seconds,
       };
       const { data, error } = await supabase
         .from("events")
@@ -471,6 +473,7 @@ function EventFormFields({
     requireCode: boolean;
     instagramUrl: string;
     themeSlug: EventThemeSlug;
+    slideshowIntervalSeconds: number;
     cardText: string;
     cardLogo: File | null;
     cardLogoPreview: string | null;
@@ -604,6 +607,26 @@ function EventFormFields({
             </div>
           )}
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="slideshow-interval">Tempo de cada foto na apresentação</Label>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <Input
+            id="slideshow-interval"
+            type="number"
+            min={2}
+            max={60}
+            step={1}
+            value={values.slideshowIntervalSeconds}
+            onChange={(e) =>
+              onChange({
+                slideshowIntervalSeconds: Math.max(2, Math.min(60, Number(e.target.value) || 5)),
+              })
+            }
+          />
+          <span className="shrink-0 text-sm text-muted-foreground">segundos</span>
+        </div>
+        <p className="text-xs text-muted-foreground">Escolha um valor entre 2 e 60 segundos.</p>
       </div>
       <div className="space-y-2">
         <Label>Fotos por moldura</Label>
@@ -942,6 +965,7 @@ function CreateEventDialog({
   const [requireCode, setRequireCode] = useState<boolean>(true);
   const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [themeSlug, setThemeSlug] = useState<EventThemeSlug>("minimal");
+  const [slideshowIntervalSeconds, setSlideshowIntervalSeconds] = useState(5);
   const [cardText, setCardText] = useState("");
   const [cardLogo, setCardLogo] = useState<File | null>(null);
   const [frame, setFrame] = useState<File | null>(null);
@@ -1056,6 +1080,7 @@ function CreateEventDialog({
         requires_code: requireCode,
         instagram_filter_url: instagramUrl.trim() || null,
         theme_slug: themeSlug,
+        slideshow_interval_seconds: slideshowIntervalSeconds,
         card_text: cardText.trim() || null,
         card_logo_url,
       };
@@ -1140,6 +1165,7 @@ function CreateEventDialog({
             requireCode,
             instagramUrl,
             themeSlug,
+            slideshowIntervalSeconds,
             cardText,
             cardLogo,
             cardLogoPreview,
@@ -1164,6 +1190,8 @@ function CreateEventDialog({
             if (p.requireCode !== undefined) setRequireCode(p.requireCode);
             if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
             if (p.themeSlug !== undefined) setThemeSlug(p.themeSlug);
+            if (p.slideshowIntervalSeconds !== undefined)
+              setSlideshowIntervalSeconds(p.slideshowIntervalSeconds);
             if (p.cardText !== undefined) setCardText(p.cardText);
             if (p.cardLogo !== undefined) setCardLogo(p.cardLogo);
             if (p.frame !== undefined) setFrame(p.frame);
@@ -1205,6 +1233,7 @@ function EditEventDialog({
   const [requireCode, setRequireCode] = useState<boolean>(true);
   const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [themeSlug, setThemeSlug] = useState<EventThemeSlug>("minimal");
+  const [slideshowIntervalSeconds, setSlideshowIntervalSeconds] = useState(5);
   const [cardText, setCardText] = useState("");
   const [cardLogo, setCardLogo] = useState<File | null>(null);
   const [frame, setFrame] = useState<File | null>(null);
@@ -1233,6 +1262,7 @@ function EditEventDialog({
     setRequireCode(event.requires_code ?? true);
     setInstagramUrl(event.instagram_filter_url ?? "");
     setThemeSlug(normalizeEventTheme(event.theme_slug));
+    setSlideshowIntervalSeconds(event.slideshow_interval_seconds ?? 5);
     setCardText(event.card_text ?? "");
     setCardLogo(null);
     setFrame(null);
@@ -1329,6 +1359,7 @@ function EditEventDialog({
         requires_code: requireCode,
         instagram_filter_url: instagramUrl.trim() || null,
         theme_slug: themeSlug,
+        slideshow_interval_seconds: slideshowIntervalSeconds,
         card_text: cardText.trim() || null,
       };
       const existingCode = eventAccessCode(event);
@@ -1467,6 +1498,7 @@ function EditEventDialog({
               requireCode,
               instagramUrl,
               themeSlug,
+              slideshowIntervalSeconds,
               cardText,
               cardLogo,
               cardLogoPreview,
@@ -1496,6 +1528,8 @@ function EditEventDialog({
               if (p.requireCode !== undefined) setRequireCode(p.requireCode);
               if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
               if (p.themeSlug !== undefined) setThemeSlug(p.themeSlug);
+              if (p.slideshowIntervalSeconds !== undefined)
+                setSlideshowIntervalSeconds(p.slideshowIntervalSeconds);
               if (p.cardText !== undefined) setCardText(p.cardText);
               if (p.cardLogo !== undefined) setCardLogo(p.cardLogo);
               if (p.frame !== undefined) setFrame(p.frame);
