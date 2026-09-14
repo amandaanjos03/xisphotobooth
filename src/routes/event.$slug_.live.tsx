@@ -200,7 +200,7 @@ function LiveSlideshow() {
       className={`event-theme theme-${normalizeEventTheme(event.theme_slug)} min-h-screen w-full bg-cover bg-center flex flex-col overflow-hidden`}
       style={bg}
     >
-      <header className="relative z-20 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 bg-background/55 backdrop-blur-md border-b border-border/40">
+      <header className="relative z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 bg-background/55 backdrop-blur-md border-b border-border/40 sm:flex sm:px-6">
         <div className="min-w-0">
           <div className="font-display text-lg sm:text-2xl font-bold truncate">{event.name}</div>
           <div className="text-[11px] uppercase text-muted-foreground inline-flex items-center gap-2">
@@ -215,15 +215,15 @@ function LiveSlideshow() {
             · {photos.length}
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="col-span-2 flex min-w-0 items-center gap-1.5 sm:col-span-1 sm:ml-auto">
           {ownedEvents.length > 1 && (
-            <label className="flex items-center gap-1 sm:gap-2 rounded-md border border-border bg-background/70 px-2 h-9">
-              <SwitchCamera className="hidden sm:block size-4" />
+            <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-md border border-border bg-background/70 px-2 sm:w-auto sm:max-w-56 sm:flex-none sm:gap-2">
+              <SwitchCamera className="size-4 shrink-0" />
               <span className="sr-only">Trocar evento</span>
               <select
                 value={slug}
                 onChange={(e) => changeEvent(e.target.value)}
-                className="max-w-24 sm:max-w-48 bg-transparent text-xs sm:text-sm outline-none"
+                className="min-w-0 w-full truncate bg-transparent text-xs outline-none sm:max-w-48 sm:text-sm"
               >
                 {ownedEvents.map((item) => (
                   <option key={item.slug} value={item.slug}>
@@ -236,6 +236,7 @@ function LiveSlideshow() {
           <Button
             variant="ghost"
             size="icon"
+            className="shrink-0"
             title={paused ? "Continuar" : "Pausar"}
             onClick={() => setPaused((value) => !value)}
           >
@@ -244,6 +245,7 @@ function LiveSlideshow() {
           <Button
             variant="ghost"
             size="icon"
+            className="shrink-0"
             title="Tela cheia"
             onClick={() =>
               document.fullscreenElement
