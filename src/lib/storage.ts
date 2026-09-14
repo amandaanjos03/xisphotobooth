@@ -26,11 +26,28 @@ export async function uploadAndSign(
 
 /** Extracts the object path inside a bucket from a (possibly expired) signed URL. */
 export function storagePathFromUrl(url: string, bucket: Bucket = "event-photos"): string | null {
-  const marker = `/object/sign/${bucket}/`;
-  const i = url.indexOf(marker);
-  if (i === -1) return null;
-  const rest = url.slice(i + marker.length).split("?")[0];
-  return rest ? decodeURIComponent(rest) : null;
+  const markers = [`/object/sign/${bucket}/`, `/object/public/${bucket}/`];
+  const marker = markers.find((candidate) => url.includes(candidate));
+  if (!marker) return null;
+  const rest = url.slice(url.indexOf(marker) + marker.length).split("?")[0];
+  if (!rest) return null;
+  try { return decodeURIComponent(rest); } catch { return rest; }
+}
+
+export async function refreshPhotoUrlsStrict<T extends { photo_url: string }>(rows: T[]): Promise<T[]> {
+  if (!rows.length) return rows;
+  const paths = rows.map((row) => storagePathFromUrl(row.photo_url));
+  const unique = Array.from(new Set(paths.filter((path): path is string => Boolean(path))));
+  if (!unique.length) return rows;
+  const { data, error } = await supabase.storage.from("event-photos").createSignedUrls(unique, PHOTO_URL_TTL);
+  if (error || !data) throw error ?? new Error("Não foi possível carregar as mídias do evento.");
+  const signedByPath = new Map<string, string>();
+  data.forEach((item) => { if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl); });
+  return rows.map((row, index) => {
+    const path = paths[index];
+    const signedUrl = path ? signedByPath.get(path) : undefined;
+    return signedUrl ? { ...row, photo_url: signedUrl } : row;
+  });
 }
 
 /**
