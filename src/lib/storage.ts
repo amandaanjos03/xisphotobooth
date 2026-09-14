@@ -31,18 +31,28 @@ export function storagePathFromUrl(url: string, bucket: Bucket = "event-photos")
   if (!marker) return null;
   const rest = url.slice(url.indexOf(marker) + marker.length).split("?")[0];
   if (!rest) return null;
-  try { return decodeURIComponent(rest); } catch { return rest; }
+  try {
+    return decodeURIComponent(rest);
+  } catch {
+    return rest;
+  }
 }
 
-export async function refreshPhotoUrlsStrict<T extends { photo_url: string }>(rows: T[]): Promise<T[]> {
+export async function refreshPhotoUrlsStrict<T extends { photo_url: string }>(
+  rows: T[],
+): Promise<T[]> {
   if (!rows.length) return rows;
   const paths = rows.map((row) => storagePathFromUrl(row.photo_url));
   const unique = Array.from(new Set(paths.filter((path): path is string => Boolean(path))));
   if (!unique.length) return rows;
-  const { data, error } = await supabase.storage.from("event-photos").createSignedUrls(unique, PHOTO_URL_TTL);
+  const { data, error } = await supabase.storage
+    .from("event-photos")
+    .createSignedUrls(unique, PHOTO_URL_TTL);
   if (error || !data) throw error ?? new Error("Não foi possível carregar as mídias do evento.");
   const signedByPath = new Map<string, string>();
-  data.forEach((item) => { if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl); });
+  data.forEach((item) => {
+    if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+  });
   return rows.map((row, index) => {
     const path = paths[index];
     const signedUrl = path ? signedByPath.get(path) : undefined;
@@ -64,7 +74,9 @@ export async function refreshPhotoUrls<T extends { photo_url: string }>(rows: T[
     .createSignedUrls(unique, PHOTO_URL_TTL);
   if (error || !data) return rows;
   const map = new Map<string, string>();
-  data.forEach((d) => { if (d.path && d.signedUrl) map.set(d.path, d.signedUrl); });
+  data.forEach((d) => {
+    if (d.path && d.signedUrl) map.set(d.path, d.signedUrl);
+  });
   return rows.map((r, i) => {
     const p = paths[i];
     const fresh = p ? map.get(p) : undefined;

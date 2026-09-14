@@ -9,13 +9,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Camera, Plus, Share2, ImageIcon, Calendar, Loader2, Copy, Check, QrCode,
-  ExternalLink, Trash2, KeyRound, LogOut, Pencil, Printer, Download, RefreshCw,
-  CopyPlus, Eye, ShieldCheck, Instagram, FileText, MonitorPlay,
+  Camera,
+  Plus,
+  Share2,
+  ImageIcon,
+  Calendar,
+  Loader2,
+  Copy,
+  Check,
+  QrCode,
+  ExternalLink,
+  Trash2,
+  KeyRound,
+  LogOut,
+  Pencil,
+  Printer,
+  Download,
+  RefreshCw,
+  CopyPlus,
+  Eye,
+  ShieldCheck,
+  Instagram,
+  FileText,
+  MonitorPlay,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -52,7 +77,13 @@ type EventRow = {
 };
 
 type GenericFrameRow = { id: string; name: string; image_url: string };
-type EventFrameRow = { id: string; frame_url: string; name: string | null; source: string; position: number };
+type EventFrameRow = {
+  id: string;
+  frame_url: string;
+  name: string | null;
+  source: string;
+  position: number;
+};
 
 const PRINT_LAYOUT_LABEL: Record<PrintLayout, string> = {
   portrait: "10x15 Retrato",
@@ -100,7 +131,11 @@ function AdminDashboard() {
   const masterQ = useQuery({
     queryKey: ["is_master", user.id],
     queryFn: async () => {
-      const { data } = await supabase.from("super_admins").select("user_id").eq("user_id", user.id).maybeSingle();
+      const { data } = await supabase
+        .from("super_admins")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
       return !!data;
     },
   });
@@ -110,10 +145,7 @@ function AdminDashboard() {
     queryFn: async () => {
       const ids = (eventsQ.data ?? []).map((e) => e.id);
       if (ids.length === 0) return {} as Record<string, number>;
-      const { data, error } = await supabase
-        .from("photos")
-        .select("event_id")
-        .in("event_id", ids);
+      const { data, error } = await supabase.from("photos").select("event_id").in("event_id", ids);
       if (error) throw error;
       const m: Record<string, number> = {};
       (data ?? []).forEach((r: { event_id: string }) => {
@@ -174,13 +206,15 @@ function AdminDashboard() {
         .order("position", { ascending: true });
       if (sourceFramesError) throw sourceFramesError;
       if (sourceFrames?.length) {
-        const { error: copyFramesError } = await supabase.from("event_frames").insert(
-          sourceFrames.map((frame) => ({ ...frame, event_id: created.id })) as never,
-        );
+        const { error: copyFramesError } = await supabase
+          .from("event_frames")
+          .insert(sourceFrames.map((frame) => ({ ...frame, event_id: created.id })) as never);
         if (copyFramesError) throw copyFramesError;
       }
       if (newCode) {
-        await supabase.from("event_secrets").insert({ event_id: created.id, access_code: newCode } as never);
+        await supabase
+          .from("event_secrets")
+          .insert({ event_id: created.id, access_code: newCode } as never);
       }
       return { event: created, code: newCode };
     },
@@ -213,7 +247,9 @@ function AdminDashboard() {
           <div className="flex items-center gap-2">
             {masterQ.data && (
               <Button asChild variant="secondary" size="sm" className="rounded-full gap-1.5">
-                <Link to="/master"><ShieldCheck className="size-4" /> Master</Link>
+                <Link to="/master">
+                  <ShieldCheck className="size-4" /> Master
+                </Link>
               </Button>
             )}
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -231,7 +267,13 @@ function AdminDashboard() {
                 }}
               />
             </Dialog>
-            <Button onClick={signOut} variant="ghost" size="icon" className="rounded-full" title="Sair">
+            <Button
+              onClick={signOut}
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              title="Sair"
+            >
               <LogOut className="size-4" />
             </Button>
           </div>
@@ -250,7 +292,6 @@ function AdminDashboard() {
           <SummaryStats events={eventsQ.data} counts={countsQ.data ?? {}} />
         )}
 
-
         {eventsQ.isLoading && (
           <div className="grid place-items-center py-20 text-muted-foreground">
             <Loader2 className="size-6 animate-spin" />
@@ -263,7 +304,9 @@ function AdminDashboard() {
               <Camera className="size-7 text-accent-foreground" />
             </div>
             <h2 className="font-display text-2xl font-bold">Nenhum evento ainda</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Crie seu primeiro evento para abrir a cabine de fotos.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Crie seu primeiro evento para abrir a cabine de fotos.
+            </p>
             <Button onClick={() => setCreateOpen(true)} className="mt-6 rounded-full gap-2">
               <Plus className="size-4" /> Criar evento
             </Button>
@@ -305,7 +348,10 @@ function AdminDashboard() {
                       <Printer className="size-3.5" />
                       {PRINT_LAYOUT_LABEL[ev.print_layout ?? "portrait"]}
                     </span>
-                    <span className="inline-flex items-center gap-1" title="Acessos ao link do evento">
+                    <span
+                      className="inline-flex items-center gap-1"
+                      title="Acessos ao link do evento"
+                    >
                       <Eye className="size-3.5" /> {ev.view_count ?? 0}
                     </span>
                     <span className="inline-flex items-center gap-1" title="Downloads">
@@ -313,14 +359,18 @@ function AdminDashboard() {
                     </span>
                   </div>
                   {ev.description && (
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{ev.description}</p>
+                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                      {ev.description}
+                    </p>
                   )}
                   {ev.requires_code ? (
                     eventAccessCode(ev) ? (
                       <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-sm">
                         <KeyRound className="size-3.5 text-primary" />
                         <span className="text-muted-foreground">Senha:</span>
-                        <span className="font-display font-bold tracking-[0.25em] text-primary">{eventAccessCode(ev)}</span>
+                        <span className="font-display font-bold tracking-[0.25em] text-primary">
+                          {eventAccessCode(ev)}
+                        </span>
                       </div>
                     ) : null
                   ) : (
@@ -330,10 +380,20 @@ function AdminDashboard() {
                   )}
                 </div>
                 <div className="mt-auto flex items-center gap-2 flex-wrap">
-                  <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setShareFor({ event: ev })}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-full gap-1.5"
+                    onClick={() => setShareFor({ event: ev })}
+                  >
                     <Share2 className="size-3.5" /> Compartilhar
                   </Button>
-                  <Button variant="secondary" size="sm" className="rounded-full gap-1.5" onClick={() => setEditing(ev)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-full gap-1.5"
+                    onClick={() => setEditing(ev)}
+                  >
                     <Pencil className="size-3.5" /> Editar
                   </Button>
                   <Button
@@ -344,7 +404,11 @@ function AdminDashboard() {
                     onClick={() => dupMut.mutate(ev)}
                     title="Duplicar evento"
                   >
-                    {dupMut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <CopyPlus className="size-3.5" />}
+                    {dupMut.isPending ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <CopyPlus className="size-3.5" />
+                    )}
                     Duplicar
                   </Button>
                   <Button asChild variant="ghost" size="sm" className="rounded-full gap-1.5">
@@ -357,7 +421,8 @@ function AdminDashboard() {
                     size="sm"
                     className="ml-auto rounded-full text-muted-foreground hover:text-destructive"
                     onClick={() => {
-                      if (confirm(`Excluir "${ev.name}"? Isso remove todas as fotos do evento.`)) delMut.mutate(ev.id);
+                      if (confirm(`Excluir "${ev.name}"? Isso remove todas as fotos do evento.`))
+                        delMut.mutate(ev.id);
                     }}
                   >
                     <Trash2 className="size-4" />
@@ -387,7 +452,8 @@ function AdminDashboard() {
 }
 
 function EventFormFields({
-  values, onChange,
+  values,
+  onChange,
 }: {
   values: {
     name: string;
@@ -432,11 +498,22 @@ function EventFormFields({
     <>
       <div className="space-y-2">
         <Label htmlFor="name">Nome do evento</Label>
-        <Input id="name" value={values.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Aniversário da Amanda" required />
+        <Input
+          id="name"
+          value={values.name}
+          onChange={(e) => onChange({ name: e.target.value })}
+          placeholder="Aniversário da Amanda"
+          required
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="date">Data do evento</Label>
-        <Input id="date" type="date" value={values.date} onChange={(e) => onChange({ date: e.target.value })} />
+        <Input
+          id="date"
+          type="date"
+          value={values.date}
+          onChange={(e) => onChange({ date: e.target.value })}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="desc">Mensagem de boas-vindas (opcional)</Label>
@@ -447,12 +524,16 @@ function EventFormFields({
           onChange={(e) => onChange({ description: e.target.value })}
           placeholder="Boas-vindas ao casamento! Capture momentos e divirta-se."
         />
-        <p className="text-xs text-muted-foreground">Aparece para os convidados na tela inicial da cabine.</p>
+        <p className="text-xs text-muted-foreground">
+          Aparece para os convidados na tela inicial da cabine.
+        </p>
       </div>
       <div className="space-y-3">
         <div>
           <Label>Identidade visual do link</Label>
-          <p className="mt-1 text-xs text-muted-foreground">Escolha o clima da cabine e da apresentação ao vivo.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Escolha o clima da cabine e da apresentação ao vivo.
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {EVENT_THEMES.map((theme) => {
@@ -466,10 +547,14 @@ function EventFormFields({
                 onClick={() => onChange({ themeSlug: theme.slug })}
               >
                 <span className="flex gap-1" aria-hidden="true">
-                  {theme.swatches.map((swatch) => <span key={swatch} className={`h-5 flex-1 rounded-sm ${swatch}`} />)}
+                  {theme.swatches.map((swatch) => (
+                    <span key={swatch} className={`h-5 flex-1 rounded-sm ${swatch}`} />
+                  ))}
                 </span>
                 <span className="font-semibold leading-tight">{theme.name}</span>
-                <span className="text-[11px] font-normal text-muted-foreground leading-snug">{theme.description}</span>
+                <span className="text-[11px] font-normal text-muted-foreground leading-snug">
+                  {theme.description}
+                </span>
               </Button>
             );
           })}
@@ -506,7 +591,9 @@ function EventFormFields({
           <option value="landscape">10x15 Paisagem</option>
           <option value="a4">A4</option>
         </select>
-        <p className="text-xs text-muted-foreground">Define o tamanho da composição final e da página de impressão.</p>
+        <p className="text-xs text-muted-foreground">
+          Define o tamanho da composição final e da página de impressão.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -536,7 +623,6 @@ function EventFormFields({
             : "Qualquer pessoa com o link poderá acessar a cabine, sem senha."}
         </p>
       </div>
-
 
       <div className="space-y-2">
         <Label>Sobreposição nas fotos</Label>
@@ -571,7 +657,11 @@ function EventFormFields({
             {(values.framePreview || values.existingFrameUrl) && (
               <div className="mt-2 aspect-[3/4] max-h-56 rounded-lg border border-border overflow-hidden bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={values.framePreview ?? values.existingFrameUrl ?? ""} alt="Moldura principal" className="size-full object-contain" />
+                <img
+                  src={values.framePreview ?? values.existingFrameUrl ?? ""}
+                  alt="Moldura principal"
+                  className="size-full object-contain"
+                />
               </div>
             )}
           </div>
@@ -585,11 +675,19 @@ function EventFormFields({
               multiple
               onChange={(e) => onChange({ extraFrameFiles: Array.from(e.target.files ?? []) })}
             />
-            <p className="text-xs text-muted-foreground">Selecione vários arquivos de uma vez. O convidado poderá escolher entre todas as molduras.</p>
+            <p className="text-xs text-muted-foreground">
+              Selecione vários arquivos de uma vez. O convidado poderá escolher entre todas as
+              molduras.
+            </p>
             {values.extraFrameFiles.length > 0 && (
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 {values.extraFrameFiles.map((file, index) => (
-                  <span key={`${file.name}-${index}`} className="rounded-full border border-border bg-muted px-2.5 py-1">{file.name}</span>
+                  <span
+                    key={`${file.name}-${index}`}
+                    className="rounded-full border border-border bg-muted px-2.5 py-1"
+                  >
+                    {file.name}
+                  </span>
                 ))}
               </div>
             )}
@@ -600,15 +698,28 @@ function EventFormFields({
               <Label>Molduras já adicionadas</Label>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {values.existingExtraFrames?.map((frame) => (
-                  <div key={frame.id} className="relative overflow-hidden rounded-md border border-border bg-muted aspect-square">
-                    <img src={frame.frame_url} alt={frame.name ?? "Moldura"} className="size-full object-contain p-1" />
+                  <div
+                    key={frame.id}
+                    className="relative overflow-hidden rounded-md border border-border bg-muted aspect-square"
+                  >
+                    <img
+                      src={frame.frame_url}
+                      alt={frame.name ?? "Moldura"}
+                      className="size-full object-contain p-1"
+                    />
                     <Button
                       type="button"
                       size="icon"
                       variant="destructive"
                       className="absolute right-1 top-1 size-7 rounded-full"
                       title="Remover moldura"
-                      onClick={() => onChange({ existingExtraFrames: values.existingExtraFrames?.filter((item) => item.id !== frame.id) ?? [] })}
+                      onClick={() =>
+                        onChange({
+                          existingExtraFrames:
+                            values.existingExtraFrames?.filter((item) => item.id !== frame.id) ??
+                            [],
+                        })
+                      }
                     >
                       <Trash2 className="size-3.5" />
                     </Button>
@@ -630,19 +741,27 @@ function EventFormFields({
                       type="button"
                       variant={selected ? "default" : "outline"}
                       className="h-auto min-h-28 flex-col gap-2 p-2"
-                      onClick={() => onChange({
-                        selectedGenericFrameIds: selected
-                          ? values.selectedGenericFrameIds.filter((id) => id !== genericFrame.id)
-                          : [...values.selectedGenericFrameIds, genericFrame.id],
-                      })}
+                      onClick={() =>
+                        onChange({
+                          selectedGenericFrameIds: selected
+                            ? values.selectedGenericFrameIds.filter((id) => id !== genericFrame.id)
+                            : [...values.selectedGenericFrameIds, genericFrame.id],
+                        })
+                      }
                     >
-                      <img src={genericFrame.image_url} alt="" className="h-20 w-full object-contain" />
+                      <img
+                        src={genericFrame.image_url}
+                        alt=""
+                        className="h-20 w-full object-contain"
+                      />
                       <span className="w-full truncate text-xs">{genericFrame.name}</span>
                     </Button>
                   );
                 })}
               </div>
-              <p className="text-xs text-muted-foreground">Toque para selecionar ou desmarcar quantas molduras desejar.</p>
+              <p className="text-xs text-muted-foreground">
+                Toque para selecionar ou desmarcar quantas molduras desejar.
+              </p>
             </div>
           )}
         </div>
@@ -659,7 +778,11 @@ function EventFormFields({
             {(values.logoPreview || values.existingLogoUrl) && (
               <div className="mt-2 h-32 rounded-lg border border-border overflow-hidden grid place-items-center bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={values.logoPreview ?? values.existingLogoUrl ?? ""} alt="Logo" className="max-h-full max-w-full object-contain" />
+                <img
+                  src={values.logoPreview ?? values.existingLogoUrl ?? ""}
+                  alt="Logo"
+                  className="max-h-full max-w-full object-contain"
+                />
               </div>
             )}
           </div>
@@ -677,7 +800,13 @@ function EventFormFields({
                       : "border-input bg-background hover:bg-accent"
                   }`}
                 >
-                  {p === "top" ? "Topo" : p === "bottom" ? "Base" : p === "left" ? "Esquerda" : "Direita"}
+                  {p === "top"
+                    ? "Topo"
+                    : p === "bottom"
+                      ? "Base"
+                      : p === "left"
+                        ? "Esquerda"
+                        : "Direita"}
                 </button>
               ))}
             </div>
@@ -695,7 +824,11 @@ function EventFormFields({
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              Percentual em relação à {values.logoPosition === "left" || values.logoPosition === "right" ? "altura" : "largura"} da composição.
+              Percentual em relação à{" "}
+              {values.logoPosition === "left" || values.logoPosition === "right"
+                ? "altura"
+                : "largura"}{" "}
+              da composição.
             </p>
           </div>
         </>
@@ -712,10 +845,16 @@ function EventFormFields({
         {(values.bgPreview || values.existingBgUrl) && (
           <div className="mt-2 aspect-video max-h-40 rounded-lg border border-border overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={values.bgPreview ?? values.existingBgUrl ?? ""} alt="Fundo" className="size-full object-cover" />
+            <img
+              src={values.bgPreview ?? values.existingBgUrl ?? ""}
+              alt="Fundo"
+              className="size-full object-cover"
+            />
           </div>
         )}
-        <p className="text-xs text-muted-foreground">Será aplicada como plano de fundo da página da cabine.</p>
+        <p className="text-xs text-muted-foreground">
+          Será aplicada como plano de fundo da página da cabine.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -731,15 +870,21 @@ function EventFormFields({
             placeholder="https://www.instagram.com/ar/..."
           />
         </div>
-        <p className="text-xs text-muted-foreground">Aparecerá como botão "Abrir filtro no Instagram" para os convidados.</p>
+        <p className="text-xs text-muted-foreground">
+          Aparecerá como botão "Abrir filtro no Instagram" para os convidados.
+        </p>
       </div>
     </>
   );
 }
 
 function CreateEventDialog({
-  ownerId, onCreated,
-}: { ownerId: string; onCreated: (event: EventRow, code: string) => void }) {
+  ownerId,
+  onCreated,
+}: {
+  ownerId: string;
+  onCreated: (event: EventRow, code: string) => void;
+}) {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
@@ -763,21 +908,30 @@ function CreateEventDialog({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!frame) { setFramePreview(null); return; }
+    if (!frame) {
+      setFramePreview(null);
+      return;
+    }
     const url = URL.createObjectURL(frame);
     setFramePreview(url);
     return () => URL.revokeObjectURL(url);
   }, [frame]);
 
   useEffect(() => {
-    if (!logo) { setLogoPreview(null); return; }
+    if (!logo) {
+      setLogoPreview(null);
+      return;
+    }
     const url = URL.createObjectURL(logo);
     setLogoPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [logo]);
 
   useEffect(() => {
-    if (!bg) { setBgPreview(null); return; }
+    if (!bg) {
+      setBgPreview(null);
+      return;
+    }
     const url = URL.createObjectURL(bg);
     setBgPreview(url);
     return () => URL.revokeObjectURL(url);
@@ -793,15 +947,30 @@ function CreateEventDialog({
 
       let frame_url: string | null = null;
       if (overlayType === "frame" && frame) {
-        frame_url = await uploadAndSign("event-frames", `${slug}/${Date.now()}-${frame.name}`, frame, frame.type);
+        frame_url = await uploadAndSign(
+          "event-frames",
+          `${slug}/${Date.now()}-${frame.name}`,
+          frame,
+          frame.type,
+        );
       }
       let logo_url: string | null = null;
       if (overlayType === "logo" && logo) {
-        logo_url = await uploadAndSign("event-frames", `${slug}/logo-${Date.now()}-${logo.name}`, logo, logo.type);
+        logo_url = await uploadAndSign(
+          "event-frames",
+          `${slug}/logo-${Date.now()}-${logo.name}`,
+          logo,
+          logo.type,
+        );
       }
       let bg_url: string | null = null;
       if (bg) {
-        bg_url = await uploadAndSign("event-frames", `${slug}/bg-${Date.now()}-${bg.name}`, bg, bg.type);
+        bg_url = await uploadAndSign(
+          "event-frames",
+          `${slug}/bg-${Date.now()}-${bg.name}`,
+          bg,
+          bg.type,
+        );
       }
       const insert = {
         name: name.trim(),
@@ -829,16 +998,26 @@ function CreateEventDialog({
       if (error) throw error;
       const created = data as unknown as EventRow;
       const { data: genericFrames, error: genericFramesError } = selectedGenericFrameIds.length
-        ? await supabase.from("generic_frames").select("id, name, image_url").in("id", selectedGenericFrameIds)
+        ? await supabase
+            .from("generic_frames")
+            .select("id, name, image_url")
+            .in("id", selectedGenericFrameIds)
         : { data: [], error: null };
       if (genericFramesError) throw genericFramesError;
-      const uploadedExtraFrames = await Promise.all(extraFrameFiles.map(async (extraFrame, position) => ({
-        event_id: created.id,
-        frame_url: await uploadAndSign("event-frames", `${slug}/extra-${Date.now()}-${position}-${extraFrame.name}`, extraFrame, extraFrame.type),
-        name: extraFrame.name.replace(/\.[^.]+$/, ""),
-        source: "custom",
-        position,
-      })));
+      const uploadedExtraFrames = await Promise.all(
+        extraFrameFiles.map(async (extraFrame, position) => ({
+          event_id: created.id,
+          frame_url: await uploadAndSign(
+            "event-frames",
+            `${slug}/extra-${Date.now()}-${position}-${extraFrame.name}`,
+            extraFrame,
+            extraFrame.type,
+          ),
+          name: extraFrame.name.replace(/\.[^.]+$/, ""),
+          source: "custom",
+          position,
+        })),
+      );
       const libraryExtraFrames = (genericFrames ?? []).map((genericFrame, index) => ({
         event_id: created.id,
         frame_url: genericFrame.image_url,
@@ -848,7 +1027,9 @@ function CreateEventDialog({
       }));
       const allExtraFrames = [...uploadedExtraFrames, ...libraryExtraFrames];
       if (allExtraFrames.length) {
-        const { error: framesError } = await supabase.from("event_frames").insert(allExtraFrames as never);
+        const { error: framesError } = await supabase
+          .from("event_frames")
+          .insert(allExtraFrames as never);
         if (framesError) throw framesError;
       }
       if (code) {
@@ -879,10 +1060,25 @@ function CreateEventDialog({
       <form onSubmit={submit} className="space-y-4">
         <EventFormFields
           values={{
-            name, date, photoCount, description, printLayout,
-            overlayType, logoPosition, logoSize, requireCode, instagramUrl, themeSlug,
-            frame, logo, bg, framePreview, logoPreview, bgPreview,
-            extraFrameFiles, selectedGenericFrameIds,
+            name,
+            date,
+            photoCount,
+            description,
+            printLayout,
+            overlayType,
+            logoPosition,
+            logoSize,
+            requireCode,
+            instagramUrl,
+            themeSlug,
+            frame,
+            logo,
+            bg,
+            framePreview,
+            logoPreview,
+            bgPreview,
+            extraFrameFiles,
+            selectedGenericFrameIds,
           }}
           onChange={(p) => {
             if (p.name !== undefined) setName(p.name);
@@ -898,7 +1094,8 @@ function CreateEventDialog({
             if (p.themeSlug !== undefined) setThemeSlug(p.themeSlug);
             if (p.frame !== undefined) setFrame(p.frame);
             if (p.extraFrameFiles !== undefined) setExtraFrameFiles(p.extraFrameFiles);
-            if (p.selectedGenericFrameIds !== undefined) setSelectedGenericFrameIds(p.selectedGenericFrameIds);
+            if (p.selectedGenericFrameIds !== undefined)
+              setSelectedGenericFrameIds(p.selectedGenericFrameIds);
             if (p.logo !== undefined) setLogo(p.logo);
             if (p.bg !== undefined) setBg(p.bg);
           }}
@@ -915,9 +1112,14 @@ function CreateEventDialog({
 }
 
 function EditEventDialog({
-  event, onClose, onSaved,
-}: { event: EventRow | null; onClose: () => void; onSaved: () => void }) {
-
+  event,
+  onClose,
+  onSaved,
+}: {
+  event: EventRow | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [photoCount, setPhotoCount] = useState<1 | 2 | 3 | 4>(4);
@@ -976,21 +1178,30 @@ function EditEventDialog({
   }, [event]);
 
   useEffect(() => {
-    if (!frame) { setFramePreview(null); return; }
+    if (!frame) {
+      setFramePreview(null);
+      return;
+    }
     const url = URL.createObjectURL(frame);
     setFramePreview(url);
     return () => URL.revokeObjectURL(url);
   }, [frame]);
 
   useEffect(() => {
-    if (!logo) { setLogoPreview(null); return; }
+    if (!logo) {
+      setLogoPreview(null);
+      return;
+    }
     const url = URL.createObjectURL(logo);
     setLogoPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [logo]);
 
   useEffect(() => {
-    if (!bg) { setBgPreview(null); return; }
+    if (!bg) {
+      setBgPreview(null);
+      return;
+    }
     const url = URL.createObjectURL(bg);
     setBgPreview(url);
     return () => URL.revokeObjectURL(url);
@@ -1002,7 +1213,10 @@ function EditEventDialog({
     const newCode = generateAccessCode();
     const { error } = await supabase
       .from("event_secrets")
-      .upsert({ event_id: event.id, access_code: newCode, updated_at: new Date().toISOString() } as never, { onConflict: "event_id" });
+      .upsert(
+        { event_id: event.id, access_code: newCode, updated_at: new Date().toISOString() } as never,
+        { onConflict: "event_id" },
+      );
     if (error) return toast.error(error.message);
     toast.success(`Nova senha: ${newCode}`);
     onSaved();
@@ -1035,33 +1249,66 @@ function EditEventDialog({
         nextCode = null;
       }
       if (frame) {
-        patch.frame_url = await uploadAndSign("event-frames", `${event.slug}/${Date.now()}-${frame.name}`, frame, frame.type);
+        patch.frame_url = await uploadAndSign(
+          "event-frames",
+          `${event.slug}/${Date.now()}-${frame.name}`,
+          frame,
+          frame.type,
+        );
       }
       if (logo) {
-        patch.logo_url = await uploadAndSign("event-frames", `${event.slug}/logo-${Date.now()}-${logo.name}`, logo, logo.type);
+        patch.logo_url = await uploadAndSign(
+          "event-frames",
+          `${event.slug}/logo-${Date.now()}-${logo.name}`,
+          logo,
+          logo.type,
+        );
       }
       if (bg) {
-        patch.bg_url = await uploadAndSign("event-frames", `${event.slug}/bg-${Date.now()}-${bg.name}`, bg, bg.type);
+        patch.bg_url = await uploadAndSign(
+          "event-frames",
+          `${event.slug}/bg-${Date.now()}-${bg.name}`,
+          bg,
+          bg.type,
+        );
       }
-      const { error } = await supabase.from("events").update(patch as never).eq("id", event.id);
+      const { error } = await supabase
+        .from("events")
+        .update(patch as never)
+        .eq("id", event.id);
       if (error) throw error;
-      const removedFrameIds = originalExtraFrameIds.filter((id) => !existingExtraFrames.some((item) => item.id === id));
+      const removedFrameIds = originalExtraFrameIds.filter(
+        (id) => !existingExtraFrames.some((item) => item.id === id),
+      );
       if (removedFrameIds.length) {
-        const { error: removeFramesError } = await supabase.from("event_frames").delete().in("id", removedFrameIds);
+        const { error: removeFramesError } = await supabase
+          .from("event_frames")
+          .delete()
+          .in("id", removedFrameIds);
         if (removeFramesError) throw removeFramesError;
       }
       const { data: genericFrames, error: genericFramesError } = selectedGenericFrameIds.length
-        ? await supabase.from("generic_frames").select("id, name, image_url").in("id", selectedGenericFrameIds)
+        ? await supabase
+            .from("generic_frames")
+            .select("id, name, image_url")
+            .in("id", selectedGenericFrameIds)
         : { data: [], error: null };
       if (genericFramesError) throw genericFramesError;
       const startPosition = existingExtraFrames.length;
-      const uploadedExtraFrames = await Promise.all(extraFrameFiles.map(async (extraFrame, index) => ({
-        event_id: event.id,
-        frame_url: await uploadAndSign("event-frames", `${event.slug}/extra-${Date.now()}-${index}-${extraFrame.name}`, extraFrame, extraFrame.type),
-        name: extraFrame.name.replace(/\.[^.]+$/, ""),
-        source: "custom",
-        position: startPosition + index,
-      })));
+      const uploadedExtraFrames = await Promise.all(
+        extraFrameFiles.map(async (extraFrame, index) => ({
+          event_id: event.id,
+          frame_url: await uploadAndSign(
+            "event-frames",
+            `${event.slug}/extra-${Date.now()}-${index}-${extraFrame.name}`,
+            extraFrame,
+            extraFrame.type,
+          ),
+          name: extraFrame.name.replace(/\.[^.]+$/, ""),
+          source: "custom",
+          position: startPosition + index,
+        })),
+      );
       const libraryExtraFrames = (genericFrames ?? []).map((genericFrame, index) => ({
         event_id: event.id,
         frame_url: genericFrame.image_url,
@@ -1071,7 +1318,9 @@ function EditEventDialog({
       }));
       const newExtraFrames = [...uploadedExtraFrames, ...libraryExtraFrames];
       if (newExtraFrames.length) {
-        const { error: framesError } = await supabase.from("event_frames").insert(newExtraFrames as never);
+        const { error: framesError } = await supabase
+          .from("event_frames")
+          .insert(newExtraFrames as never);
         if (framesError) throw framesError;
       }
       if (nextCode === null) {
@@ -1079,7 +1328,14 @@ function EditEventDialog({
       } else if (typeof nextCode === "string") {
         const { error: secErr } = await supabase
           .from("event_secrets")
-          .upsert({ event_id: event.id, access_code: nextCode, updated_at: new Date().toISOString() } as never, { onConflict: "event_id" });
+          .upsert(
+            {
+              event_id: event.id,
+              access_code: nextCode,
+              updated_at: new Date().toISOString(),
+            } as never,
+            { onConflict: "event_id" },
+          );
         if (secErr) throw secErr;
       }
       toast.success("Evento atualizado");
@@ -1102,10 +1358,26 @@ function EditEventDialog({
         <form onSubmit={submit} className="space-y-4">
           <EventFormFields
             values={{
-              name, date, photoCount, description, printLayout,
-              overlayType, logoPosition, logoSize, requireCode, instagramUrl, themeSlug,
-              frame, logo, bg, framePreview, logoPreview, bgPreview,
-              extraFrameFiles, selectedGenericFrameIds, existingExtraFrames,
+              name,
+              date,
+              photoCount,
+              description,
+              printLayout,
+              overlayType,
+              logoPosition,
+              logoSize,
+              requireCode,
+              instagramUrl,
+              themeSlug,
+              frame,
+              logo,
+              bg,
+              framePreview,
+              logoPreview,
+              bgPreview,
+              extraFrameFiles,
+              selectedGenericFrameIds,
+              existingExtraFrames,
               existingFrameUrl: event?.frame_url ?? null,
               existingLogoUrl: event?.logo_url ?? null,
               existingBgUrl: event?.bg_url ?? null,
@@ -1124,8 +1396,10 @@ function EditEventDialog({
               if (p.themeSlug !== undefined) setThemeSlug(p.themeSlug);
               if (p.frame !== undefined) setFrame(p.frame);
               if (p.extraFrameFiles !== undefined) setExtraFrameFiles(p.extraFrameFiles);
-              if (p.selectedGenericFrameIds !== undefined) setSelectedGenericFrameIds(p.selectedGenericFrameIds);
-              if (p.existingExtraFrames !== undefined) setExistingExtraFrames(p.existingExtraFrames);
+              if (p.selectedGenericFrameIds !== undefined)
+                setSelectedGenericFrameIds(p.selectedGenericFrameIds);
+              if (p.existingExtraFrames !== undefined)
+                setExistingExtraFrames(p.existingExtraFrames);
               if (p.logo !== undefined) setLogo(p.logo);
               if (p.bg !== undefined) setBg(p.bg);
             }}
@@ -1135,15 +1409,25 @@ function EditEventDialog({
               <KeyRound className="size-4 text-primary" />
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground">Senha atual</div>
-                <div className="font-display font-bold tracking-[0.3em] text-primary">{eventAccessCode(event)}</div>
+                <div className="font-display font-bold tracking-[0.3em] text-primary">
+                  {eventAccessCode(event)}
+                </div>
               </div>
-              <Button type="button" size="sm" variant="secondary" className="rounded-full gap-1.5" onClick={regenerateCode}>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="rounded-full gap-1.5"
+                onClick={regenerateCode}
+              >
                 <RefreshCw className="size-3.5" /> Gerar nova
               </Button>
             </div>
           )}
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
             <Button type="submit" disabled={busy} className="rounded-full gap-2">
               {busy && <Loader2 className="size-4 animate-spin" />}
               Salvar alterações
@@ -1156,15 +1440,20 @@ function EditEventDialog({
 }
 
 function ShareDialog({
-  event, accessCode, onClose,
-}: { event: EventRow | null; accessCode?: string; onClose: () => void }) {
+  event,
+  accessCode,
+  onClose,
+}: {
+  event: EventRow | null;
+  accessCode?: string;
+  onClose: () => void;
+}) {
   const [qr, setQr] = useState<string | null>(null);
   const [liveQr, setLiveQr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [liveCopied, setLiveCopied] = useState(false);
-  const url = event && typeof window !== "undefined"
-    ? `${window.location.origin}/event/${event.slug}`
-    : "";
+  const url =
+    event && typeof window !== "undefined" ? `${window.location.origin}/event/${event.slug}` : "";
   const liveUrl = url ? `${url}/live` : "";
   const codeToShow = accessCode ?? eventAccessCode(event) ?? null;
 
@@ -1173,7 +1462,11 @@ function ShareDialog({
     QRCode.toDataURL(url, { width: 512, margin: 1, color: { dark: "#0e524a", light: "#ffffff" } })
       .then(setQr)
       .catch(() => setQr(null));
-    QRCode.toDataURL(`${url}/live`, { width: 512, margin: 1, color: { dark: "#0e524a", light: "#ffffff" } })
+    QRCode.toDataURL(`${url}/live`, {
+      width: 512,
+      margin: 1,
+      color: { dark: "#0e524a", light: "#ffffff" },
+    })
       .then(setLiveQr)
       .catch(() => setLiveQr(null));
   }, [event, url]);
@@ -1189,11 +1482,8 @@ function ShareDialog({
     }
   }
 
-
   async function copyAll() {
-    const text = codeToShow
-      ? `${event?.name}\nLink: ${url}\nSenha: ${codeToShow}`
-      : url;
+    const text = codeToShow ? `${event?.name}\nLink: ${url}\nSenha: ${codeToShow}` : url;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -1212,9 +1502,18 @@ function ShareDialog({
             <QrCode className="size-5" /> Compartilhar cabine
           </DialogTitle>
           <DialogDescription>
-            {event?.requires_code === false
-              ? <>Os convidados acessam a cabine de <span className="font-semibold text-foreground">{event?.name}</span> direto pelo link, sem senha.</>
-              : <>Os convidados escaneiam este código ou abrem o link e informam a senha do evento <span className="font-semibold text-foreground">{event?.name}</span>.</>}
+            {event?.requires_code === false ? (
+              <>
+                Os convidados acessam a cabine de{" "}
+                <span className="font-semibold text-foreground">{event?.name}</span> direto pelo
+                link, sem senha.
+              </>
+            ) : (
+              <>
+                Os convidados escaneiam este código ou abrem o link e informam a senha do evento{" "}
+                <span className="font-semibold text-foreground">{event?.name}</span>.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4">
@@ -1223,7 +1522,9 @@ function ShareDialog({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={qr} alt="QR Code" className="size-56" />
             ) : (
-              <div className="size-56 grid place-items-center"><Loader2 className="animate-spin" /></div>
+              <div className="size-56 grid place-items-center">
+                <Loader2 className="animate-spin" />
+              </div>
             )}
           </div>
 
@@ -1241,13 +1542,15 @@ function ShareDialog({
                 {codeToShow}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Compartilhe com os convidados junto ao link. Você pode consultá-la a qualquer momento aqui.
+                Compartilhe com os convidados junto ao link. Você pode consultá-la a qualquer
+                momento aqui.
               </p>
             </div>
           ) : (
             <div className="w-full rounded-xl border border-dashed border-border bg-muted/40 p-3 text-center text-xs text-muted-foreground">
               <KeyRound className="inline size-3.5 mr-1 -mt-0.5" />
-              Este evento foi criado antes do armazenamento de senhas. Edite o evento para gerar uma nova.
+              Este evento foi criado antes do armazenamento de senhas. Edite o evento para gerar uma
+              nova.
             </div>
           )}
 
@@ -1301,16 +1604,12 @@ function ShareDialog({
               <MonitorPlay className="size-4 text-primary" /> Apresentação ao vivo
             </div>
             <p className="text-xs text-muted-foreground">
-              Projete este link em um telão ou TV: as fotos do evento aparecem automaticamente conforme são tiradas.
+              Projete este link em um telão ou TV: as fotos do evento aparecem automaticamente
+              conforme são tiradas.
             </p>
             <div className="flex items-center gap-2 rounded-full border border-input bg-background px-3 py-1.5">
               <span className="truncate text-xs text-muted-foreground flex-1">{liveUrl}</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="rounded-full gap-1.5"
-                onClick={copyLive}
-              >
+              <Button size="sm" variant="ghost" className="rounded-full gap-1.5" onClick={copyLive}>
                 {liveCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                 {liveCopied ? "Copiado" : "Copiar"}
               </Button>
@@ -1370,7 +1669,9 @@ function SummaryStats({ events, counts }: { events: EventRow[]; counts: Record<s
           <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
             <c.icon className="size-4" /> {c.label}
           </div>
-          <div className="font-display text-2xl font-bold mt-1">{c.value.toLocaleString("pt-BR")}</div>
+          <div className="font-display text-2xl font-bold mt-1">
+            {c.value.toLocaleString("pt-BR")}
+          </div>
         </div>
       ))}
     </div>

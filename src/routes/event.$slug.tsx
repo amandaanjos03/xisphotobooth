@@ -7,9 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Camera, Printer, Download, RotateCcw, Loader2,
-  ChevronLeft, ChevronRight, Upload, KeyRound, Trash2,
-  RefreshCw, Maximize2, Minimize2, Video, Square, Play, Instagram,
+  Camera,
+  Printer,
+  Download,
+  RotateCcw,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  KeyRound,
+  Trash2,
+  RefreshCw,
+  Maximize2,
+  Minimize2,
+  Video,
+  Square,
+  Play,
+  Instagram,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
@@ -43,11 +57,11 @@ type ExtraFrame = { id: string; frame_url: string; name: string | null };
 type LiveFilter = "normal" | "vintage" | "pb" | "vibrant" | "soft";
 
 const FILTERS: Record<LiveFilter, { label: string; css: string }> = {
-  normal:  { label: "Normal",   css: "none" },
-  vintage: { label: "Vintage",  css: "sepia(0.55) saturate(1.2) contrast(1.05)" },
-  pb:      { label: "P&B",      css: "grayscale(1) contrast(1.05)" },
+  normal: { label: "Normal", css: "none" },
+  vintage: { label: "Vintage", css: "sepia(0.55) saturate(1.2) contrast(1.05)" },
+  pb: { label: "P&B", css: "grayscale(1) contrast(1.05)" },
   vibrant: { label: "Vibrante", css: "saturate(1.5) contrast(1.1)" },
-  soft:    { label: "Soft",     css: "brightness(1.08) contrast(0.95) saturate(1.15)" },
+  soft: { label: "Soft", css: "brightness(1.08) contrast(0.95) saturate(1.15)" },
 };
 
 type OverlayChoice =
@@ -60,7 +74,9 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code, instagram_filter_url, theme_slug")
+      .select(
+        "id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code, instagram_filter_url, theme_slug",
+      )
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
@@ -83,7 +99,9 @@ export const Route = createFileRoute("/event/$slug")({
     <div className="min-h-screen bg-blob grid place-items-center px-4">
       <div className="card-soft p-8 max-w-md text-center">
         <h1 className="font-display text-3xl font-bold">Evento não encontrado</h1>
-        <p className="mt-2 text-muted-foreground">Este link de cabine é inválido ou foi removido.</p>
+        <p className="mt-2 text-muted-foreground">
+          Este link de cabine é inválido ou foi removido.
+        </p>
       </div>
     </div>
   ),
@@ -133,8 +151,10 @@ function requireAccessToken(): string {
 
 function buildOverlayOptions(event: EventRow, extras: ExtraFrame[]): OverlayChoice[] {
   const opts: OverlayChoice[] = [];
-  if (event.frame_url) opts.push({ kind: "frame", frameUrl: event.frame_url, label: "Moldura principal" });
-  for (const f of extras) opts.push({ kind: "frame", frameUrl: f.frame_url, label: f.name || "Moldura" });
+  if (event.frame_url)
+    opts.push({ kind: "frame", frameUrl: event.frame_url, label: "Moldura principal" });
+  for (const f of extras)
+    opts.push({ kind: "frame", frameUrl: f.frame_url, label: f.name || "Moldura" });
   if (event.logo_url) opts.push({ kind: "logo", label: "Somente logo" });
   opts.push({ kind: "none", label: "Sem overlay" });
   return opts;
@@ -160,16 +180,26 @@ function BoothPage() {
     const key = `xis:view:${event.slug}`;
     if (window.sessionStorage.getItem(key)) return;
     window.sessionStorage.setItem(key, "1");
-    supabase.rpc("increment_event_view" as never, { _slug: event.slug } as never).then(() => {}, () => {});
+    supabase.rpc("increment_event_view" as never, { _slug: event.slug } as never).then(
+      () => {},
+      () => {},
+    );
   }, [event.slug]);
 
   const overlayOptions = buildOverlayOptions(event, extraFrames);
   const [choiceIdx, setChoiceIdx] = useState(0);
-  const choice = overlayOptions[Math.min(choiceIdx, overlayOptions.length - 1)] ?? { kind: "none" as const, label: "Sem overlay" };
+  const choice = overlayOptions[Math.min(choiceIdx, overlayOptions.length - 1)] ?? {
+    kind: "none" as const,
+    label: "Sem overlay",
+  };
   const effectiveEvent = applyChoice(event, choice);
 
   const [uploadSource, setUploadSource] = useState<UploadSource>("gallery");
-  const [finalPhoto, setFinalPhoto] = useState<{ id: string; url: string; mediaType: MediaType } | null>(null);
+  const [finalPhoto, setFinalPhoto] = useState<{
+    id: string;
+    url: string;
+    mediaType: MediaType;
+  } | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -183,29 +213,48 @@ function BoothPage() {
         // Server decides: no code required, or the caller owns/masters the event.
         const token = await issueAccess(event.slug);
         if (!cancelled && token) setUnlocked(true);
-      } catch { /* falls back to the code gate */ }
+      } catch {
+        /* falls back to the code gate */
+      }
       if (!cancelled) setCheckingAuth(false);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [event.slug, event.requires_code]);
 
-  function reset() { setFinalPhoto(null); setPhase("welcome"); }
+  function reset() {
+    setFinalPhoto(null);
+    setPhase("welcome");
+  }
 
   if (checkingAuth) {
-    return <div className="min-h-screen bg-blob grid place-items-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="min-h-screen bg-blob grid place-items-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
   if (!unlocked) return <AccessGate event={event} onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div
       className={`event-theme theme-${normalizeEventTheme(event.theme_slug)} min-h-screen bg-cover bg-center bg-no-repeat`}
-      style={event.bg_url ? { backgroundImage: `linear-gradient(var(--event-wash), var(--event-wash)), url("${event.bg_url}")` } : undefined}
+      style={
+        event.bg_url
+          ? {
+              backgroundImage: `linear-gradient(var(--event-wash), var(--event-wash)), url("${event.bg_url}")`,
+            }
+          : undefined
+      }
     >
       <PrintPageStyle layout={event.print_layout ?? "portrait"} />
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3 flex items-center justify-end gap-2">
           <FullScreenToggle />
-          <div className="text-xs uppercase tracking-widest text-muted-foreground hidden sm:block">Xis Photo Booth</div>
+          <div className="text-xs uppercase tracking-widest text-muted-foreground hidden sm:block">
+            Xis Photo Booth
+          </div>
         </div>
       </header>
 
@@ -216,14 +265,20 @@ function BoothPage() {
           choiceIdx={choiceIdx}
           onChoose={setChoiceIdx}
           onStart={() => setPhase("capture")}
-          onUpload={(src) => { setUploadSource(src); setPhase("upload"); }}
+          onUpload={(src) => {
+            setUploadSource(src);
+            setPhase("upload");
+          }}
           onRecordVideo={() => setPhase("record-video")}
         />
       )}
       {phase === "capture" && (
         <CaptureFlow
           event={effectiveEvent}
-          onDone={(photo) => { setFinalPhoto({ ...photo, mediaType: "image" }); setPhase("done"); }}
+          onDone={(photo) => {
+            setFinalPhoto({ ...photo, mediaType: "image" });
+            setPhase("done");
+          }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
         />
@@ -232,7 +287,10 @@ function BoothPage() {
         <UploadFlow
           event={effectiveEvent}
           source={uploadSource}
-          onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
+          onDone={(item) => {
+            setFinalPhoto(item);
+            setPhase("done");
+          }}
           onCancel={reset}
           onComposing={() => setPhase("composing")}
         />
@@ -240,7 +298,10 @@ function BoothPage() {
       {phase === "record-video" && (
         <RecordVideoFlow
           event={effectiveEvent}
-          onDone={(item) => { setFinalPhoto(item); setPhase("done"); }}
+          onDone={(item) => {
+            setFinalPhoto(item);
+            setPhase("done");
+          }}
           onCancel={reset}
           onUploading={() => setPhase("composing")}
         />
@@ -258,7 +319,6 @@ function BoothPage() {
   );
 }
 
-
 function PrintPageStyle({ layout }: { layout: PrintLayout }) {
   useEffect(() => {
     const id = "dyn-print-page";
@@ -268,12 +328,11 @@ function PrintPageStyle({ layout }: { layout: PrintLayout }) {
       el.id = id;
       document.head.appendChild(el);
     }
-    const size =
-      layout === "landscape" ? "15cm 10cm" :
-      layout === "a4" ? "A4" :
-      "10cm 15cm";
+    const size = layout === "landscape" ? "15cm 10cm" : layout === "a4" ? "A4" : "10cm 15cm";
     el.innerHTML = `@media print { @page { size: ${size}; margin: 0; } }`;
-    return () => { el?.remove(); };
+    return () => {
+      el?.remove();
+    };
   }, [layout]);
   return null;
 }
@@ -331,7 +390,9 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
           Informe a senha do evento que o anfitrião compartilhou junto com o link.
         </p>
         <form onSubmit={submit} className="mt-6 space-y-3">
-          <Label htmlFor="code" className="sr-only">Senha do evento</Label>
+          <Label htmlFor="code" className="sr-only">
+            Senha do evento
+          </Label>
           <Input
             id="code"
             value={code}
@@ -353,7 +414,13 @@ function AccessGate({ event, onUnlock }: { event: EventRow; onUnlock: () => void
 }
 
 function Welcome({
-  event, overlayOptions, choiceIdx, onChoose, onStart, onUpload, onRecordVideo,
+  event,
+  overlayOptions,
+  choiceIdx,
+  onChoose,
+  onStart,
+  onUpload,
+  onRecordVideo,
 }: {
   event: EventRow;
   overlayOptions: OverlayChoice[];
@@ -368,7 +435,9 @@ function Welcome({
       <div className="inline-flex items-center gap-2 rounded-full bg-accent/60 px-4 py-1.5 text-sm font-medium text-accent-foreground">
         <Camera className="size-3.5" /> Cabine de Fotos
       </div>
-      <h1 className="mt-6 font-display text-5xl sm:text-7xl font-bold leading-tight">{event.name}</h1>
+      <h1 className="mt-6 font-display text-5xl sm:text-7xl font-bold leading-tight">
+        {event.name}
+      </h1>
       {event.date && (
         <p className="mt-3 text-muted-foreground text-lg">
           {new Date(event.date).toLocaleDateString("pt-BR", { dateStyle: "long" })}
@@ -380,13 +449,15 @@ function Welcome({
         </p>
       ) : (
         <p className="mx-auto mt-6 max-w-md text-muted-foreground">
-          Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"} com contagem regressiva de 3 segundos. Você também pode gravar um vídeo curto ou enviar mídias do seu dispositivo.
+          Prepare-se — vamos capturar {event.photo_count} foto{event.photo_count === 1 ? "" : "s"}{" "}
+          com contagem regressiva de 3 segundos. Você também pode gravar um vídeo curto ou enviar
+          mídias do seu dispositivo.
         </p>
       )}
       <div className="mt-10 flex flex-col items-center justify-center gap-3">
         <button
           onClick={onStart}
-         className="inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-lg transition active:scale-95 hover:opacity-95"
+          className="inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-lg transition active:scale-95 hover:opacity-95"
         >
           <Camera className="size-6 sm:size-7" />
           Tirar Fotos (com cabine)
@@ -425,8 +496,14 @@ function Welcome({
 }
 
 function OverlayPicker({
-  options, value, onChange,
-}: { options: OverlayChoice[]; value: number; onChange: (i: number) => void }) {
+  options,
+  value,
+  onChange,
+}: {
+  options: OverlayChoice[];
+  value: number;
+  onChange: (i: number) => void;
+}) {
   return (
     <section className="mt-12 text-left">
       <h2 className="font-display text-xl font-bold text-center">Escolha a moldura</h2>
@@ -444,11 +521,19 @@ function OverlayPicker({
               <div className="aspect-square bg-[conic-gradient(at_30%_30%,oklch(0.93_0.05_98),oklch(0.97_0.03_98))] relative grid place-items-center">
                 {opt.kind === "frame" ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={opt.frameUrl} alt={opt.label} className="absolute inset-0 size-full object-contain p-2" />
+                  <img
+                    src={opt.frameUrl}
+                    alt={opt.label}
+                    className="absolute inset-0 size-full object-contain p-2"
+                  />
                 ) : opt.kind === "logo" ? (
-                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Somente logo</span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Somente logo
+                  </span>
                 ) : (
-                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Sem overlay</span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Sem overlay
+                  </span>
                 )}
               </div>
               <div className="p-2 text-xs font-semibold truncate text-center">{opt.label}</div>
@@ -460,11 +545,14 @@ function OverlayPicker({
   );
 }
 
-
 function AlbumGrid({ event }: { event: EventRow }) {
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(0);
-  const [viewing, setViewing] = useState<{ id: string; photo_url: string; media_type: MediaType } | null>(null);
+  const [viewing, setViewing] = useState<{
+    id: string;
+    photo_url: string;
+    media_type: MediaType;
+  } | null>(null);
   const [downloading, setDownloading] = useState(false);
 
   const q = useQuery({
@@ -520,7 +608,8 @@ function AlbumGrid({ event }: { event: EventRow }) {
         <div>
           <h2 className="font-display text-2xl sm:text-3xl font-bold">Álbum do evento</h2>
           <p className="text-sm text-muted-foreground">
-            {photos.length} item{photos.length === 1 ? "" : "s"} • Página {safePage + 1} de {totalPages}
+            {photos.length} item{photos.length === 1 ? "" : "s"} • Página {safePage + 1} de{" "}
+            {totalPages}
           </p>
         </div>
         <Button
@@ -529,7 +618,11 @@ function AlbumGrid({ event }: { event: EventRow }) {
           className="rounded-full gap-2"
           variant="secondary"
         >
-          {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+          {downloading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Download className="size-4" />
+          )}
           Baixar todas as mídias
         </Button>
       </div>
@@ -589,7 +682,10 @@ function AlbumGrid({ event }: { event: EventRow }) {
                   </button>
                 )}
                 <button
-                  onClick={() => { downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.${ext}`); trackDownload(event.id); }}
+                  onClick={() => {
+                    downloadPhoto(p.photo_url, `${event.slug}-${absoluteIndex}.${ext}`);
+                    trackDownload(event.id);
+                  }}
                   className="size-8 grid place-items-center rounded-full bg-background/90 backdrop-blur-sm shadow hover:bg-background"
                   aria-label="Baixar"
                   title="Baixar"
@@ -660,7 +756,10 @@ async function finalizeAndUpload(
 }
 
 function CaptureFlow({
-  event, onDone, onCancel, onComposing,
+  event,
+  onDone,
+  onCancel,
+  onComposing,
 }: {
   event: EventRow;
   onDone: (photo: { id: string; url: string }) => void;
@@ -690,7 +789,10 @@ function CaptureFlow({
           video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
           audio: false,
         });
-        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -722,10 +824,14 @@ function CaptureFlow({
     canvas.width = TARGET_W;
     canvas.height = TARGET_H;
     const ctx = canvas.getContext("2d")!;
-    const vw = v.videoWidth, vh = v.videoHeight;
+    const vw = v.videoWidth,
+      vh = v.videoHeight;
     const targetRatio = TARGET_W / TARGET_H;
     const videoRatio = vw / vh;
-    let sx = 0, sy = 0, sw = vw, sh = vh;
+    let sx = 0,
+      sy = 0,
+      sw = vw,
+      sh = vh;
     if (videoRatio > targetRatio) {
       sw = vh * targetRatio;
       sx = (vw - sw) / 2;
@@ -773,7 +879,10 @@ function CaptureFlow({
       }, 1000);
     }, initialDelay);
 
-    return () => { alive = false; clearTimeout(t0); };
+    return () => {
+      alive = false;
+      clearTimeout(t0);
+    };
   }, [ready, shotIndex, captureFrame, error, event.photo_count]);
 
   useEffect(() => {
@@ -797,8 +906,12 @@ function CaptureFlow({
         <div className="card-soft p-8">
           <h2 className="font-display text-2xl font-bold">Câmera indisponível</h2>
           <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-          <p className="mt-2 text-sm text-muted-foreground">Permita o acesso à câmera e tente novamente.</p>
-          <Button onClick={onCancel} className="mt-6 rounded-full">Voltar</Button>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Permita o acesso à câmera e tente novamente.
+          </p>
+          <Button onClick={onCancel} className="mt-6 rounded-full">
+            Voltar
+          </Button>
         </div>
       </div>
     );
@@ -838,12 +951,17 @@ function CaptureFlow({
 
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 p-2 rounded-2xl bg-black/40 backdrop-blur-sm">
           {Array.from({ length: event.photo_count }, (_, i) => i).map((i) => (
-            <div key={i} className="size-14 sm:size-16 rounded-md overflow-hidden border-2 border-white/70 bg-black/30">
+            <div
+              key={i}
+              className="size-14 sm:size-16 rounded-md overflow-hidden border-2 border-white/70 bg-black/30"
+            >
               {shots[i] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={shots[i]} alt="" className="size-full object-cover" />
               ) : (
-                <div className="size-full grid place-items-center text-white/70 text-xs font-semibold">{i + 1}</div>
+                <div className="size-full grid place-items-center text-white/70 text-xs font-semibold">
+                  {i + 1}
+                </div>
               )}
             </div>
           ))}
@@ -865,16 +983,24 @@ function CaptureFlow({
 
       <div className="mt-4 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {ready ? `Foto ${Math.min(shotIndex + 1, event.photo_count)} de ${event.photo_count}` : "Iniciando câmera…"}
+          {ready
+            ? `Foto ${Math.min(shotIndex + 1, event.photo_count)} de ${event.photo_count}`
+            : "Iniciando câmera…"}
         </div>
-        <Button variant="ghost" onClick={onCancel} className="rounded-full">Cancelar</Button>
+        <Button variant="ghost" onClick={onCancel} className="rounded-full">
+          Cancelar
+        </Button>
       </div>
     </div>
   );
 }
 
 function UploadFlow({
-  event, source, onDone, onCancel, onComposing,
+  event,
+  source,
+  onDone,
+  onCancel,
+  onComposing,
 }: {
   event: EventRow;
   source: UploadSource;
@@ -893,8 +1019,14 @@ function UploadFlow({
   }, []);
 
   useEffect(() => {
-    if (files.length === 0) { setPreviews([]); return; }
-    const items = files.map((f) => ({ url: URL.createObjectURL(f), isVideo: f.type.startsWith("video/") }));
+    if (files.length === 0) {
+      setPreviews([]);
+      return;
+    }
+    const items = files.map((f) => ({
+      url: URL.createObjectURL(f),
+      isVideo: f.type.startsWith("video/"),
+    }));
     setPreviews(items);
     return () => items.forEach((p) => URL.revokeObjectURL(p.url));
   }, [files]);
@@ -903,7 +1035,9 @@ function UploadFlow({
 
   function handleFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
-    const arr = Array.from(list).filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
+    const arr = Array.from(list).filter(
+      (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
+    );
     if (arr.length === 0) return;
     // If a video is selected, only keep one file (videos uploaded as-is)
     const video = arr.find((f) => f.type.startsWith("video/"));
@@ -922,10 +1056,19 @@ function UploadFlow({
       canvas.width = TARGET_W;
       canvas.height = TARGET_H;
       const ctx = canvas.getContext("2d")!;
-      const ir = img.width / img.height, tr = TARGET_W / TARGET_H;
-      let sw = img.width, sh = img.height, sx = 0, sy = 0;
-      if (ir > tr) { sw = img.height * tr; sx = (img.width - sw) / 2; }
-      else { sh = img.width / tr; sy = (img.height - sh) / 2; }
+      const ir = img.width / img.height,
+        tr = TARGET_W / TARGET_H;
+      let sw = img.width,
+        sh = img.height,
+        sx = 0,
+        sy = 0;
+      if (ir > tr) {
+        sw = img.height * tr;
+        sx = (img.width - sw) / 2;
+      } else {
+        sh = img.width / tr;
+        sy = (img.height - sh) / 2;
+      }
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
       return canvas.toDataURL("image/jpeg", 0.92);
     } finally {
@@ -989,7 +1132,8 @@ function UploadFlow({
           <div>
             <h2 className="font-display text-2xl font-bold leading-tight">Enviar foto ou vídeo</h2>
             <p className="text-sm text-muted-foreground">
-              Selecione quantas fotos quiser — cada uma será enviada ao álbum com a moldura do evento aplicada. Vídeos também são aceitos (um por vez).
+              Selecione quantas fotos quiser — cada uma será enviada ao álbum com a moldura do
+              evento aplicada. Vídeos também são aceitos (um por vez).
             </p>
           </div>
         </div>
@@ -1047,7 +1191,12 @@ async function uploadVideoAndInsert(
   const url = await uploadAndSign("event-photos", path, file, file.type || "video/mp4");
   const { data, error } = await supabase
     .from("photos")
-    .insert({ event_id: event.id, photo_url: url, media_type: "video", access_token: token } as never)
+    .insert({
+      event_id: event.id,
+      photo_url: url,
+      media_type: "video",
+      access_token: token,
+    } as never)
     .select("id")
     .single();
   if (error) throw error;
@@ -1057,7 +1206,12 @@ async function uploadVideoAndInsert(
 // ---- Video overlay helpers (frame/logo applied to videos) ----
 
 function pickVideoMime(): string {
-  const candidates = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+  const candidates = [
+    "video/mp4",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+  ];
   for (const c of candidates) {
     if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c)) return c;
   }
@@ -1103,7 +1257,8 @@ function drawVideoOverlay(
   const maxW = W - margin * 2;
   const maxH = H - margin * 2;
   const scale = Math.min(1, maxW / finalW, maxH / finalH);
-  finalW *= scale; finalH *= scale;
+  finalW *= scale;
+  finalH *= scale;
   let x = (W - finalW) / 2;
   let y = (H - finalH) / 2;
   if (position === "top") y = margin;
@@ -1128,7 +1283,8 @@ function recordVideoWithOverlay(
     const W = source.videoWidth || 1280;
     const H = source.videoHeight || 720;
     const canvas = document.createElement("canvas");
-    canvas.width = W; canvas.height = H;
+    canvas.width = W;
+    canvas.height = H;
     const ctx = canvas.getContext("2d")!;
 
     let rafId = 0;
@@ -1136,7 +1292,9 @@ function recordVideoWithOverlay(
       try {
         ctx.drawImage(source, 0, 0, W, H);
         if (overlay) drawVideoOverlay(ctx, overlay, event, W, H);
-      } catch { /* frame not ready */ }
+      } catch {
+        /* frame not ready */
+      }
       rafId = requestAnimationFrame(draw);
     };
     draw();
@@ -1156,7 +1314,9 @@ function recordVideoWithOverlay(
       return;
     }
     const chunks: BlobPart[] = [];
-    rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+    rec.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunks.push(e.data);
+    };
     rec.onstop = () => {
       cancelAnimationFrame(rafId);
       canvasStream.getTracks().forEach((t) => t.stop());
@@ -1164,9 +1324,16 @@ function recordVideoWithOverlay(
       const ext: "mp4" | "webm" = type.includes("mp4") ? "mp4" : "webm";
       resolve({ blob: new Blob(chunks, { type }), ext });
     };
-    rec.onerror = (e) => reject(new Error((e as unknown as { error?: { message?: string } }).error?.message || "Erro ao gravar"));
+    rec.onerror = (e) =>
+      reject(
+        new Error(
+          (e as unknown as { error?: { message?: string } }).error?.message || "Erro ao gravar",
+        ),
+      );
 
-    const stop = () => { if (rec.state !== "inactive") rec.stop(); };
+    const stop = () => {
+      if (rec.state !== "inactive") rec.stop();
+    };
     controls.onStop?.(stop);
     if (controls.stopOnEnded) source.addEventListener("ended", stop, { once: true });
 
@@ -1174,7 +1341,10 @@ function recordVideoWithOverlay(
   });
 }
 
-async function transcodeUploadedVideoWithOverlay(file: File, event: EventRow): Promise<{ blob: Blob; ext: "mp4" | "webm" }> {
+async function transcodeUploadedVideoWithOverlay(
+  file: File,
+  event: EventRow,
+): Promise<{ blob: Blob; ext: "mp4" | "webm" }> {
   const overlay = await loadOverlay(event);
   if (!overlay) {
     const ext: "mp4" | "webm" = file.type.includes("webm") ? "webm" : "mp4";
@@ -1196,23 +1366,32 @@ async function transcodeUploadedVideoWithOverlay(file: File, event: EventRow): P
 
   let audioTracks: MediaStreamTrack[] = [];
   try {
-    const stream = (v as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream?.();
+    const stream = (
+      v as HTMLVideoElement & { captureStream?: () => MediaStream }
+    ).captureStream?.();
     if (stream) audioTracks = stream.getAudioTracks();
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   await v.play();
   try {
     return await recordVideoWithOverlay(v, audioTracks, event, overlay, { stopOnEnded: true });
   } finally {
-    try { v.pause(); } catch { /* ignore */ }
+    try {
+      v.pause();
+    } catch {
+      /* ignore */
+    }
     URL.revokeObjectURL(url);
   }
 }
 
-
-
 function RecordVideoFlow({
-  event, onDone, onCancel, onUploading,
+  event,
+  onDone,
+  onCancel,
+  onUploading,
 }: {
   event: EventRow;
   onDone: (item: { id: string; url: string; mediaType: MediaType }) => void;
@@ -1241,7 +1420,10 @@ function RecordVideoFlow({
           video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: true,
         });
-        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -1254,11 +1436,14 @@ function RecordVideoFlow({
     })();
     return () => {
       cancelled = true;
-      try { stopFnRef.current?.(); } catch { /* ignore */ }
+      try {
+        stopFnRef.current?.();
+      } catch {
+        /* ignore */
+      }
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-
   }, [facing]);
 
   useEffect(() => {
@@ -1283,13 +1468,11 @@ function RecordVideoFlow({
       const audioTracks = stream.getAudioTracks();
       setElapsed(0);
       setRecording(true);
-      const recording$ = recordVideoWithOverlay(
-        sourceVideo,
-        audioTracks,
-        event,
-        overlay,
-        { onStop: (cb) => { stopFnRef.current = cb; } },
-      );
+      const recording$ = recordVideoWithOverlay(sourceVideo, audioTracks, event, overlay, {
+        onStop: (cb) => {
+          stopFnRef.current = cb;
+        },
+      });
       recording$
         .then(async ({ blob, ext }) => {
           onUploading();
@@ -1312,11 +1495,14 @@ function RecordVideoFlow({
   }
 
   function stopRecording() {
-    try { stopFnRef.current?.(); } catch { /* ignore */ }
+    try {
+      stopFnRef.current?.();
+    } catch {
+      /* ignore */
+    }
     stopFnRef.current = null;
     setRecording(false);
   }
-
 
   async function flipCamera() {
     if (recording) return;
@@ -1331,8 +1517,12 @@ function RecordVideoFlow({
         <div className="card-soft p-8">
           <h2 className="font-display text-2xl font-bold">Câmera indisponível</h2>
           <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-          <p className="mt-2 text-sm text-muted-foreground">Permita o acesso à câmera e ao microfone para gravar vídeos.</p>
-          <Button onClick={onCancel} className="mt-6 rounded-full">Voltar</Button>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Permita o acesso à câmera e ao microfone para gravar vídeos.
+          </p>
+          <Button onClick={onCancel} className="mt-6 rounded-full">
+            Voltar
+          </Button>
         </div>
       </div>
     );
@@ -1360,7 +1550,8 @@ function RecordVideoFlow({
         {recording && (
           <div className="absolute top-3 left-3 inline-flex items-center gap-2 rounded-full bg-red-600 px-3 py-1.5 text-white text-sm font-semibold">
             <span className="size-2 rounded-full bg-white animate-pulse" />
-            REC {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")} / 0:{MAX_SECONDS}
+            REC {String(Math.floor(elapsed / 60)).padStart(2, "0")}:
+            {String(elapsed % 60).padStart(2, "0")} / 0:{MAX_SECONDS}
           </div>
         )}
       </div>
@@ -1374,7 +1565,11 @@ function RecordVideoFlow({
             Cancelar
           </Button>
           {!recording ? (
-            <Button onClick={startRecording} disabled={!ready} className="rounded-full gap-2 bg-red-600 hover:bg-red-600/90">
+            <Button
+              onClick={startRecording}
+              disabled={!ready}
+              className="rounded-full gap-2 bg-red-600 hover:bg-red-600/90"
+            >
               <Video className="size-4" /> Iniciar gravação
             </Button>
           ) : (
@@ -1389,30 +1584,57 @@ function RecordVideoFlow({
 }
 
 // Compose photo strip with frame or logo overlay; layout adapts to print format.
-async function composeStrip(
-  shots: string[],
-  event: EventRow,
-  count: number,
-): Promise<Blob> {
+async function composeStrip(shots: string[], event: EventRow, count: number): Promise<Blob> {
   const layout: PrintLayout = event.print_layout ?? "portrait";
-  const cellW = 600, cellH = 800, gap = 24, pad = 36;
+  const cellW = 600,
+    cellH = 800,
+    gap = 24,
+    pad = 36;
 
-  let cols = 1, rows = 1;
+  let cols = 1,
+    rows = 1;
   if (layout === "landscape") {
-    if (count === 1) { cols = 1; rows = 1; }
-    else if (count === 2) { cols = 2; rows = 1; }
-    else if (count === 3) { cols = 3; rows = 1; }
-    else { cols = 2; rows = 2; }
+    if (count === 1) {
+      cols = 1;
+      rows = 1;
+    } else if (count === 2) {
+      cols = 2;
+      rows = 1;
+    } else if (count === 3) {
+      cols = 3;
+      rows = 1;
+    } else {
+      cols = 2;
+      rows = 2;
+    }
   } else if (layout === "a4") {
-    if (count === 1) { cols = 1; rows = 1; }
-    else if (count === 2) { cols = 1; rows = 2; }
-    else if (count === 3) { cols = 1; rows = 3; }
-    else { cols = 2; rows = 2; }
+    if (count === 1) {
+      cols = 1;
+      rows = 1;
+    } else if (count === 2) {
+      cols = 1;
+      rows = 2;
+    } else if (count === 3) {
+      cols = 1;
+      rows = 3;
+    } else {
+      cols = 2;
+      rows = 2;
+    }
   } else {
-    if (count === 1) { cols = 1; rows = 1; }
-    else if (count === 2) { cols = 1; rows = 2; }
-    else if (count === 3) { cols = 1; rows = 3; }
-    else { cols = 2; rows = 2; }
+    if (count === 1) {
+      cols = 1;
+      rows = 1;
+    } else if (count === 2) {
+      cols = 1;
+      rows = 2;
+    } else if (count === 3) {
+      cols = 1;
+      rows = 3;
+    } else {
+      cols = 2;
+      rows = 2;
+    }
   }
 
   const W = cellW * cols + gap * (cols - 1) + pad * 2;
@@ -1486,16 +1708,35 @@ async function composeStrip(
   }
 
   return await new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Compose failed")), "image/jpeg", 0.92),
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Compose failed"))),
+      "image/jpeg",
+      0.92,
+    ),
   );
 }
 
-
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
-  const ir = img.width / img.height, tr = w / h;
-  let sw = img.width, sh = img.height, sx = 0, sy = 0;
-  if (ir > tr) { sw = img.height * tr; sx = (img.width - sw) / 2; }
-  else { sh = img.width / tr; sy = (img.height - sh) / 2; }
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  const ir = img.width / img.height,
+    tr = w / h;
+  let sw = img.width,
+    sh = img.height,
+    sx = 0,
+    sy = 0;
+  if (ir > tr) {
+    sw = img.height * tr;
+    sx = (img.width - sw) / 2;
+  } else {
+    sh = img.width / tr;
+    sy = (img.height - sh) / 2;
+  }
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
@@ -1510,12 +1751,21 @@ function loadImage(src: string, cors = false): Promise<HTMLImageElement> {
 }
 
 function trackDownload(eventId: string) {
-  supabase.rpc("increment_event_download" as never, { _event_id: eventId } as never).then(() => {}, () => {});
+  supabase.rpc("increment_event_download" as never, { _event_id: eventId } as never).then(
+    () => {},
+    () => {},
+  );
 }
 
 function DoneScreen({
-  event, photo, onReset,
-}: { event: EventRow; photo: { id: string; url: string; mediaType: MediaType }; onReset: () => void }) {
+  event,
+  photo,
+  onReset,
+}: {
+  event: EventRow;
+  photo: { id: string; url: string; mediaType: MediaType };
+  onReset: () => void;
+}) {
   const qc = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const isVideo = photo.mediaType === "video";
@@ -1532,10 +1782,13 @@ function DoneScreen({
     a.remove();
     trackDownload(event.id);
   }
-  function print() { window.print(); }
+  function print() {
+    window.print();
+  }
 
   async function deleteSelf() {
-    if (!confirm("Excluir esta mídia que você acabou de enviar? Essa ação não pode ser desfeita.")) return;
+    if (!confirm("Excluir esta mídia que você acabou de enviar? Essa ação não pode ser desfeita."))
+      return;
     setDeleting(true);
     try {
       const { error } = await supabase.from("photos").delete().eq("id", photo.id);
@@ -1557,16 +1810,30 @@ function DoneScreen({
           {isVideo ? "Vídeo enviado! 🎬" : "Ficou incrível! ✨"}
         </h2>
         <p className="mt-2 text-muted-foreground">
-          {isVideo ? "Seu vídeo foi publicado no álbum do evento." : "Sua composição está pronta e foi adicionada ao álbum."}
+          {isVideo
+            ? "Seu vídeo foi publicado no álbum do evento."
+            : "Sua composição está pronta e foi adicionada ao álbum."}
         </p>
       </div>
 
-      <div className={`print-area print-${event.print_layout ?? "portrait"} card-soft p-3 bg-white`}>
+      <div
+        className={`print-area print-${event.print_layout ?? "portrait"} card-soft p-3 bg-white`}
+      >
         {isVideo ? (
-          <video src={photo.url} controls playsInline className="block w-full h-auto rounded-lg bg-black" />
+          <video
+            src={photo.url}
+            controls
+            playsInline
+            className="block w-full h-auto rounded-lg bg-black"
+          />
         ) : (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={photo.url} alt="Sua composição de fotos" className="block w-full h-auto rounded-lg" crossOrigin="anonymous" />
+          <img
+            src={photo.url}
+            alt="Sua composição de fotos"
+            className="block w-full h-auto rounded-lg"
+            crossOrigin="anonymous"
+          />
         )}
       </div>
 
@@ -1576,10 +1843,20 @@ function DoneScreen({
             <Printer className="size-5" /> Imprimir
           </Button>
         )}
-        <Button onClick={download} variant="outline" className="rounded-full gap-2 h-14 text-base" size="lg">
+        <Button
+          onClick={download}
+          variant="outline"
+          className="rounded-full gap-2 h-14 text-base"
+          size="lg"
+        >
           <Download className="size-5" /> Baixar
         </Button>
-        <Button onClick={onReset} variant="secondary" className="rounded-full gap-2 h-14 text-base" size="lg">
+        <Button
+          onClick={onReset}
+          variant="secondary"
+          className="rounded-full gap-2 h-14 text-base"
+          size="lg"
+        >
           <RotateCcw className="size-5" /> {isVideo ? "Nova mídia" : "Novas Fotos"}
         </Button>
       </div>
