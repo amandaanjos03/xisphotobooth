@@ -944,6 +944,8 @@ function CreateEventDialog({
   const [themeSlug, setThemeSlug] = useState<EventThemeSlug>("minimal");
   const [cardText, setCardText] = useState("");
   const [cardLogo, setCardLogo] = useState<File | null>(null);
+  const [cardText, setCardText] = useState("");
+  const [cardLogo, setCardLogo] = useState<File | null>(null);
   const [frame, setFrame] = useState<File | null>(null);
   const [extraFrameFiles, setExtraFrameFiles] = useState<File[]>([]);
   const [selectedGenericFrameIds, setSelectedGenericFrameIds] = useState<string[]>([]);
@@ -952,6 +954,7 @@ function CreateEventDialog({
   const [framePreview, setFramePreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
+  const [cardLogoPreview, setCardLogoPreview] = useState<string | null>(null);
   const [cardLogoPreview, setCardLogoPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -1230,6 +1233,8 @@ function EditEventDialog({
     setRequireCode(event.requires_code ?? true);
     setInstagramUrl(event.instagram_filter_url ?? "");
     setThemeSlug(normalizeEventTheme(event.theme_slug));
+    setCardText(event.card_text ?? "");
+    setCardLogo(null);
     setFrame(null);
     setExtraFrameFiles([]);
     setSelectedGenericFrameIds([]);
@@ -1281,6 +1286,16 @@ function EditEventDialog({
     return () => URL.revokeObjectURL(url);
   }, [bg]);
 
+  useEffect(() => {
+    if (!cardLogo) {
+      setCardLogoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(cardLogo);
+    setCardLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [cardLogo]);
+
   async function regenerateCode() {
     if (!event) return;
     if (!confirm("Gerar uma nova senha para este evento? A anterior deixará de funcionar.")) return;
@@ -1314,6 +1329,7 @@ function EditEventDialog({
         requires_code: requireCode,
         instagram_filter_url: instagramUrl.trim() || null,
         theme_slug: themeSlug,
+        card_text: cardText.trim() || null,
       };
       const existingCode = eventAccessCode(event);
       let nextCode: string | null | undefined = undefined;
@@ -1344,6 +1360,14 @@ function EditEventDialog({
           `${event.slug}/bg-${Date.now()}-${bg.name}`,
           bg,
           bg.type,
+        );
+      }
+      if (cardLogo) {
+        patch.card_logo_url = await uploadAndSign(
+          "event-frames",
+          `${event.slug}/card-logo-${Date.now()}-${cardLogo.name}`,
+          cardLogo,
+          cardLogo.type,
         );
       }
       const { error } = await supabase
@@ -1443,6 +1467,9 @@ function EditEventDialog({
               requireCode,
               instagramUrl,
               themeSlug,
+              cardText,
+              cardLogo,
+              cardLogoPreview,
               frame,
               logo,
               bg,
@@ -1455,6 +1482,7 @@ function EditEventDialog({
               existingFrameUrl: event?.frame_url ?? null,
               existingLogoUrl: event?.logo_url ?? null,
               existingBgUrl: event?.bg_url ?? null,
+              existingCardLogoUrl: event?.card_logo_url ?? null,
             }}
             onChange={(p) => {
               if (p.name !== undefined) setName(p.name);
@@ -1468,6 +1496,8 @@ function EditEventDialog({
               if (p.requireCode !== undefined) setRequireCode(p.requireCode);
               if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
               if (p.themeSlug !== undefined) setThemeSlug(p.themeSlug);
+              if (p.cardText !== undefined) setCardText(p.cardText);
+              if (p.cardLogo !== undefined) setCardLogo(p.cardLogo);
               if (p.frame !== undefined) setFrame(p.frame);
               if (p.extraFrameFiles !== undefined) setExtraFrameFiles(p.extraFrameFiles);
               if (p.selectedGenericFrameIds !== undefined)
@@ -1667,6 +1697,9 @@ function ShareDialog({
                 eventName: event.name,
                 url,
                 code: codeToShow,
+                themeSlug: normalizeEventTheme(event.theme_slug),
+                cardText: event.card_text,
+                cardLogoUrl: event.card_logo_url,
               });
             }}
           >

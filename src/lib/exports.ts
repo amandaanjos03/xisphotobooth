@@ -174,9 +174,10 @@ export async function downloadEventCardPdf({
   pdf.setFont("helvetica", "normal");
   pdf.text(eventName, pageW / 2, headlineBottom + 12, { align: "center" });
 
+  const instructionsY = Math.max(96, headlineBottom + 30);
   pdf.setFontSize(16);
   pdf.setFont("helvetica", "bold");
-  pdf.text("Como participar:", pageW / 2, 96, { align: "center" });
+  pdf.text("Como participar:", pageW / 2, instructionsY, { align: "center" });
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(13);
   const steps = [
@@ -185,11 +186,11 @@ export async function downloadEventCardPdf({
     code ? `3. Informe a senha do evento: ${code}` : "3. Tire quantas fotos quiser!",
     code ? "4. Tire fotos, grave vídeos e leve suas lembranças" : "4. Baixe suas lembranças a qualquer momento",
   ];
-  steps.forEach((s, i) => pdf.text(s, pageW / 2, 108 + i * 8, { align: "center" }));
+  steps.forEach((s, i) => pdf.text(s, pageW / 2, instructionsY + 12 + i * 8, { align: "center" }));
 
   const qrSize = 82;
   const qrX = (pageW - qrSize) / 2;
-  const qrY = 143;
+  const qrY = instructionsY + 47;
   pdf.setFillColor(255, 255, 255);
   pdf.rect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8, "F");
   pdf.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
