@@ -22,6 +22,7 @@ type EventRow = {
   name: string;
   slug: string;
   bg_url: string | null;
+  logo_url: string | null;
   theme_slug: EventThemeSlug;
 };
 type PhotoRow = { id: string; photo_url: string; media_type: string; created_at: string };
@@ -202,7 +203,15 @@ function LiveSlideshow() {
     >
       <header className="relative z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 bg-background/55 backdrop-blur-md border-b border-border/40 sm:flex sm:px-6">
         <div className="min-w-0">
-          <div className="font-display text-lg sm:text-2xl font-bold truncate">{event.name}</div>
+          {event.logo_url ? (
+            <img
+              src={event.logo_url}
+              alt={event.name}
+              className="h-8 w-auto max-w-full object-contain object-left sm:h-11"
+            />
+          ) : (
+            <div className="font-display truncate text-lg font-bold sm:text-2xl">{event.name}</div>
+          )}
           <div className="text-[11px] uppercase text-muted-foreground inline-flex items-center gap-2">
             <span
               className={`size-2 rounded-full ${connection === "live" ? "bg-accent animate-pulse" : "bg-muted-foreground"}`}
