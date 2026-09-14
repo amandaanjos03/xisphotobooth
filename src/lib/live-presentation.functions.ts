@@ -22,7 +22,7 @@ export const getLivePresentation = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, name, slug, bg_url, theme_slug, card_logo_url")
+      .select("id, name, slug, bg_url, theme_slug, card_logo_url, slideshow_interval_seconds")
       .eq("slug", data.slug)
       .maybeSingle();
     if (eventError) throw eventError;

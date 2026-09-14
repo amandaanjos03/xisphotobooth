@@ -23,6 +23,7 @@ type EventRow = {
   slug: string;
   bg_url: string | null;
   card_logo_url: string | null;
+  slideshow_interval_seconds: number;
   theme_slug: EventThemeSlug;
 };
 type PhotoRow = { id: string; photo_url: string; media_type: string; created_at: string };
@@ -132,12 +133,13 @@ function LiveSlideshow() {
     };
   }, [event, loadPhotos]);
 
-  // Auto-advance every 5s.
+  // Auto-advance using the interval configured for this event.
   useEffect(() => {
-    if (photos.length < 2 || paused) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % photos.length), 5000);
+    if (photos.length < 2 || paused || !event) return;
+    const intervalMs = Math.max(2, Math.min(60, event.slideshow_interval_seconds ?? 5)) * 1000;
+    const t = setInterval(() => setIdx((i) => (i + 1) % photos.length), intervalMs);
     return () => clearInterval(t);
-  }, [paused, photos.length]);
+  }, [event, paused, photos.length]);
 
   const current = photos[idx];
   useEffect(() => {
