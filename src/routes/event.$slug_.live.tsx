@@ -25,7 +25,7 @@ type EventRow = {
 };
 type PhotoRow = { id: string; photo_url: string; media_type: string; created_at: string };
 
-export const Route = createFileRoute("/event/$slug/live")({
+export const Route = createFileRoute("/event/$slug_/live")({
   component: LiveSlideshow,
   loader: ({ params }) => ({ slug: params.slug }),
   head: () => ({
