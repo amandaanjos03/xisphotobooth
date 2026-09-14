@@ -131,6 +131,7 @@ export type Database = {
           photo_count: number
           print_layout: string
           requires_code: boolean
+          slideshow_interval_seconds: number
           slug: string
           theme_slug: string
           view_count: number
@@ -155,6 +156,7 @@ export type Database = {
           photo_count?: number
           print_layout?: string
           requires_code?: boolean
+          slideshow_interval_seconds?: number
           slug: string
           theme_slug?: string
           view_count?: number
@@ -179,6 +181,7 @@ export type Database = {
           photo_count?: number
           print_layout?: string
           requires_code?: boolean
+          slideshow_interval_seconds?: number
           slug?: string
           theme_slug?: string
           view_count?: number
