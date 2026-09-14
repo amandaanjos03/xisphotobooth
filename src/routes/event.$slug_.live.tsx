@@ -22,7 +22,7 @@ type EventRow = {
   name: string;
   slug: string;
   bg_url: string | null;
-  logo_url: string | null;
+  card_logo_url: string | null;
   theme_slug: EventThemeSlug;
 };
 type PhotoRow = { id: string; photo_url: string; media_type: string; created_at: string };
@@ -203,9 +203,9 @@ function LiveSlideshow() {
     >
       <header className="relative z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 bg-background/55 backdrop-blur-md border-b border-border/40 sm:flex sm:px-6">
         <div className="min-w-0">
-          {event.logo_url ? (
+          {event.card_logo_url ? (
             <img
-              src={event.logo_url}
+              src={event.card_logo_url}
               alt={event.name}
               className="h-8 w-auto max-w-full object-contain object-left sm:h-11"
             />
