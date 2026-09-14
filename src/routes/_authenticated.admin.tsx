@@ -944,8 +944,6 @@ function CreateEventDialog({
   const [themeSlug, setThemeSlug] = useState<EventThemeSlug>("minimal");
   const [cardText, setCardText] = useState("");
   const [cardLogo, setCardLogo] = useState<File | null>(null);
-  const [cardText, setCardText] = useState("");
-  const [cardLogo, setCardLogo] = useState<File | null>(null);
   const [frame, setFrame] = useState<File | null>(null);
   const [extraFrameFiles, setExtraFrameFiles] = useState<File[]>([]);
   const [selectedGenericFrameIds, setSelectedGenericFrameIds] = useState<string[]>([]);
@@ -954,7 +952,6 @@ function CreateEventDialog({
   const [framePreview, setFramePreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
-  const [cardLogoPreview, setCardLogoPreview] = useState<string | null>(null);
   const [cardLogoPreview, setCardLogoPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -1208,6 +1205,8 @@ function EditEventDialog({
   const [requireCode, setRequireCode] = useState<boolean>(true);
   const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [themeSlug, setThemeSlug] = useState<EventThemeSlug>("minimal");
+  const [cardText, setCardText] = useState("");
+  const [cardLogo, setCardLogo] = useState<File | null>(null);
   const [frame, setFrame] = useState<File | null>(null);
   const [extraFrameFiles, setExtraFrameFiles] = useState<File[]>([]);
   const [selectedGenericFrameIds, setSelectedGenericFrameIds] = useState<string[]>([]);
@@ -1218,6 +1217,7 @@ function EditEventDialog({
   const [framePreview, setFramePreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
+  const [cardLogoPreview, setCardLogoPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
