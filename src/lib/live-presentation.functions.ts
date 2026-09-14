@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { Database } from "@/integrations/supabase/types";
 
 const PHOTO_URL_TTL = 60 * 60;
 
@@ -21,12 +19,8 @@ function photoStoragePath(url: string): string | null {
 export const getLivePresentation = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string().min(1).max(160) }).parse(input))
   .handler(async ({ data }) => {
-    const publicClient = createClient<Database>(
-      process.env["SUPABASE_URL"]!,
-      process.env["SUPABASE_PUBLISHABLE_KEY"]!,
-      { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-    );
-    const { data: event, error: eventError } = await publicClient
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
       .select("id, name, slug, bg_url, theme_slug")
       .eq("slug", data.slug)
@@ -34,7 +28,7 @@ export const getLivePresentation = createServerFn({ method: "GET" })
     if (eventError) throw eventError;
     if (!event) return null;
 
-    const { data: photos, error: photosError } = await publicClient
+    const { data: photos, error: photosError } = await supabaseAdmin
       .from("photos")
       .select("id, photo_url, media_type, created_at")
       .eq("event_id", event.id)
@@ -48,7 +42,6 @@ export const getLivePresentation = createServerFn({ method: "GET" })
     const uniquePaths = Array.from(new Set(paths.filter((path): path is string => Boolean(path))));
     if (!uniquePaths.length) return { event, photos: rows };
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: signed, error: signedError } = await supabaseAdmin.storage
       .from("event-photos")
       .createSignedUrls(uniquePaths, PHOTO_URL_TTL);
