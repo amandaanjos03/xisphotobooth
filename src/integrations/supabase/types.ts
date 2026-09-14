@@ -130,6 +130,7 @@ export type Database = {
           print_layout: string
           requires_code: boolean
           slug: string
+          theme_slug: string
           view_count: number
         }
         Insert: {
@@ -151,6 +152,7 @@ export type Database = {
           print_layout?: string
           requires_code?: boolean
           slug: string
+          theme_slug?: string
           view_count?: number
         }
         Update: {
@@ -172,6 +174,7 @@ export type Database = {
           print_layout?: string
           requires_code?: boolean
           slug?: string
+          theme_slug?: string
           view_count?: number
         }
         Relationships: []
