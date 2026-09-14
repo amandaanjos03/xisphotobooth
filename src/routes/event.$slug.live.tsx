@@ -66,7 +66,7 @@ function LiveSlideshow() {
     if (photosError) throw photosError;
     const rows = await refreshPhotoUrlsStrict((data ?? []) as PhotoRow[]);
     rows.forEach((photo) => seenRef.current.add(photo.id));
-      setPhotos(rows);
+    setPhotos(rows);
   }, []);
 
   const loadEvent = useCallback(async () => {
