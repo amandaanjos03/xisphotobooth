@@ -74,6 +74,8 @@ type EventRow = {
   download_count: number;
   instagram_filter_url: string | null;
   theme_slug: EventThemeSlug;
+  card_text: string | null;
+  card_logo_url: string | null;
 };
 
 type GenericFrameRow = { id: string; name: string; image_url: string };
@@ -191,6 +193,8 @@ function AdminDashboard() {
         owner_id: user.id,
         instagram_filter_url: ev.instagram_filter_url,
         theme_slug: normalizeEventTheme(ev.theme_slug),
+        card_text: ev.card_text,
+        card_logo_url: ev.card_logo_url,
       };
       const { data, error } = await supabase
         .from("events")
@@ -467,6 +471,9 @@ function EventFormFields({
     requireCode: boolean;
     instagramUrl: string;
     themeSlug: EventThemeSlug;
+    cardText: string;
+    cardLogo: File | null;
+    cardLogoPreview: string | null;
     frame: File | null;
     extraFrameFiles: File[];
     selectedGenericFrameIds: string[];
@@ -479,6 +486,7 @@ function EventFormFields({
     existingFrameUrl?: string | null;
     existingLogoUrl?: string | null;
     existingBgUrl?: string | null;
+    existingCardLogoUrl?: string | null;
   };
   onChange: (patch: Partial<typeof values>) => void;
 }) {
@@ -558,6 +566,43 @@ function EventFormFields({
               </Button>
             );
           })}
+        </div>
+      </div>
+      <div className="space-y-3 rounded-lg border border-border p-4">
+        <div>
+          <Label htmlFor="card-text">Personalização do cartão A4</Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            O cartão usa o tema escolhido acima e pode ter uma chamada e um logo próprios.
+          </p>
+        </div>
+        <Textarea
+          id="card-text"
+          rows={3}
+          maxLength={220}
+          value={values.cardText}
+          onChange={(e) => onChange({ cardText: e.target.value })}
+          placeholder="Que bom que você veio! Registre e compartilhe este momento conosco."
+        />
+        <div className="text-right text-xs text-muted-foreground">
+          {values.cardText.length}/220
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="card-logo">Logo no topo do cartão (opcional)</Label>
+          <Input
+            id="card-logo"
+            type="file"
+            accept="image/png,image/webp,image/jpeg"
+            onChange={(e) => onChange({ cardLogo: e.target.files?.[0] ?? null })}
+          />
+          {(values.cardLogoPreview || values.existingCardLogoUrl) && (
+            <div className="h-24 overflow-hidden rounded-md border border-border bg-muted grid place-items-center p-3">
+              <img
+                src={values.cardLogoPreview ?? values.existingCardLogoUrl ?? ""}
+                alt="Logo do cartão A4"
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+          )}
         </div>
       </div>
       <div className="space-y-2">
@@ -897,6 +942,8 @@ function CreateEventDialog({
   const [requireCode, setRequireCode] = useState<boolean>(true);
   const [instagramUrl, setInstagramUrl] = useState<string>("");
   const [themeSlug, setThemeSlug] = useState<EventThemeSlug>("minimal");
+  const [cardText, setCardText] = useState("");
+  const [cardLogo, setCardLogo] = useState<File | null>(null);
   const [frame, setFrame] = useState<File | null>(null);
   const [extraFrameFiles, setExtraFrameFiles] = useState<File[]>([]);
   const [selectedGenericFrameIds, setSelectedGenericFrameIds] = useState<string[]>([]);
@@ -905,6 +952,7 @@ function CreateEventDialog({
   const [framePreview, setFramePreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
+  const [cardLogoPreview, setCardLogoPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -936,6 +984,16 @@ function CreateEventDialog({
     setBgPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [bg]);
+
+  useEffect(() => {
+    if (!cardLogo) {
+      setCardLogoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(cardLogo);
+    setCardLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [cardLogo]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -972,6 +1030,15 @@ function CreateEventDialog({
           bg.type,
         );
       }
+      let card_logo_url: string | null = null;
+      if (cardLogo) {
+        card_logo_url = await uploadAndSign(
+          "event-frames",
+          `${slug}/card-logo-${Date.now()}-${cardLogo.name}`,
+          cardLogo,
+          cardLogo.type,
+        );
+      }
       const insert = {
         name: name.trim(),
         slug,
@@ -989,6 +1056,8 @@ function CreateEventDialog({
         requires_code: requireCode,
         instagram_filter_url: instagramUrl.trim() || null,
         theme_slug: themeSlug,
+        card_text: cardText.trim() || null,
+        card_logo_url,
       };
       const { data, error } = await supabase
         .from("events")
@@ -1071,6 +1140,9 @@ function CreateEventDialog({
             requireCode,
             instagramUrl,
             themeSlug,
+            cardText,
+            cardLogo,
+            cardLogoPreview,
             frame,
             logo,
             bg,
@@ -1092,6 +1164,8 @@ function CreateEventDialog({
             if (p.requireCode !== undefined) setRequireCode(p.requireCode);
             if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
             if (p.themeSlug !== undefined) setThemeSlug(p.themeSlug);
+            if (p.cardText !== undefined) setCardText(p.cardText);
+            if (p.cardLogo !== undefined) setCardLogo(p.cardLogo);
             if (p.frame !== undefined) setFrame(p.frame);
             if (p.extraFrameFiles !== undefined) setExtraFrameFiles(p.extraFrameFiles);
             if (p.selectedGenericFrameIds !== undefined)
