@@ -66,7 +66,7 @@ function LiveSlideshow() {
     if (photosError) throw photosError;
     const rows = await refreshPhotoUrlsStrict((data ?? []) as PhotoRow[]);
     rows.forEach((photo) => seenRef.current.add(photo.id));
-    setPhotos((current) => (initial ? rows : mergePhotos(rows, current)));
+      setPhotos(rows);
   }, []);
 
   const loadEvent = useCallback(async () => {
@@ -160,6 +160,9 @@ function LiveSlideshow() {
 
   const current = photos[idx];
   useEffect(() => {
+    if (idx >= photos.length) setIdx(0);
+  }, [idx, photos.length]);
+  useEffect(() => {
     if (!current) return;
     setPrevious((old) =>
       old?.id === current.id ? old : (photos[(idx - 1 + photos.length) % photos.length] ?? null),
@@ -234,13 +237,13 @@ function LiveSlideshow() {
         </div>
         <div className="flex items-center gap-1.5">
           {ownedEvents.length > 1 && (
-            <label className="hidden sm:flex items-center gap-2 rounded-md border border-border bg-background/70 px-2 h-9">
-              <SwitchCamera className="size-4" />
+            <label className="flex items-center gap-1 sm:gap-2 rounded-md border border-border bg-background/70 px-2 h-9">
+              <SwitchCamera className="hidden sm:block size-4" />
               <span className="sr-only">Trocar evento</span>
               <select
                 value={slug}
                 onChange={(e) => changeEvent(e.target.value)}
-                className="max-w-48 bg-transparent text-sm outline-none"
+                className="max-w-24 sm:max-w-48 bg-transparent text-xs sm:text-sm outline-none"
               >
                 {ownedEvents.map((item) => (
                   <option key={item.slug} value={item.slug}>
@@ -355,14 +358,6 @@ function LiveSlideshow() {
       )}
     </div>
   );
-}
-
-function mergePhotos(incoming: PhotoRow[], current: PhotoRow[]) {
-  const byId = new Map(current.map((photo) => [photo.id, photo]));
-  incoming.forEach((photo) => byId.set(photo.id, photo));
-  return Array.from(byId.values())
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .slice(0, 200);
 }
 
 function LiveMedia({ media, className }: { media: PhotoRow; className?: string }) {
