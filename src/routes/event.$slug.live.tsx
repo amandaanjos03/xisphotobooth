@@ -137,7 +137,7 @@ function LiveSlideshow() {
   }, []);
 
   const bg = useMemo(
-    () => (event.bg_url ? { backgroundImage: `linear-gradient(var(--event-wash), var(--event-wash)), url("${event.bg_url}")` } : undefined),
+    () => (event?.bg_url ? { backgroundImage: `linear-gradient(var(--event-wash), var(--event-wash)), url("${event.bg_url}")` } : undefined),
     [event?.bg_url],
   );
 
