@@ -17,7 +17,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated.master'
 import { Route as EventSlugRouteImport } from './routes/event.$slug'
 import { Route as EventSlugGalleryRouteImport } from './routes/event.$slug.gallery'
-import { Route as EventSlugLiveRouteImport } from './routes/event.$slug.live'
+import { Route as EventSlugLiveRouteImport } from './routes/event.$slug_.live'
 import { Route as AuthenticatedAdminEventSlugRouteImport } from './routes/_authenticated.admin.event.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -60,9 +60,9 @@ const EventSlugGalleryRoute = EventSlugGalleryRouteImport.update({
   getParentRoute: () => EventSlugRoute,
 } as any)
 const EventSlugLiveRoute = EventSlugLiveRouteImport.update({
-  id: '/live',
-  path: '/live',
-  getParentRoute: () => EventSlugRoute,
+  id: '/event/$slug_/live',
+  path: '/event/$slug/live',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminEventSlugRoute =
   AuthenticatedAdminEventSlugRouteImport.update({
@@ -103,7 +103,7 @@ export interface FileRoutesById {
   '/_authenticated/master': typeof AuthenticatedMasterRoute
   '/event/$slug': typeof EventSlugRouteWithChildren
   '/event/$slug/gallery': typeof EventSlugGalleryRoute
-  '/event/$slug/live': typeof EventSlugLiveRoute
+  '/event/$slug_/live': typeof EventSlugLiveRoute
   '/_authenticated/admin/event/$slug': typeof AuthenticatedAdminEventSlugRoute
 }
 export interface FileRouteTypes {
@@ -139,7 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/master'
     | '/event/$slug'
     | '/event/$slug/gallery'
-    | '/event/$slug/live'
+    | '/event/$slug_/live'
     | '/_authenticated/admin/event/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -149,6 +149,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   EventSlugRoute: typeof EventSlugRouteWithChildren
+  EventSlugLiveRoute: typeof EventSlugLiveRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -209,12 +210,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventSlugGalleryRouteImport
       parentRoute: typeof EventSlugRoute
     }
-    '/event/$slug/live': {
-      id: '/event/$slug/live'
-      path: '/live'
+    '/event/$slug_/live': {
+      id: '/event/$slug_/live'
+      path: '/event/$slug/live'
       fullPath: '/event/$slug/live'
       preLoaderRoute: typeof EventSlugLiveRouteImport
-      parentRoute: typeof EventSlugRoute
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/event/$slug': {
       id: '/_authenticated/admin/event/$slug'
@@ -253,12 +254,10 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 interface EventSlugRouteChildren {
   EventSlugGalleryRoute: typeof EventSlugGalleryRoute
-  EventSlugLiveRoute: typeof EventSlugLiveRoute
 }
 
 const EventSlugRouteChildren: EventSlugRouteChildren = {
   EventSlugGalleryRoute: EventSlugGalleryRoute,
-  EventSlugLiveRoute: EventSlugLiveRoute,
 }
 
 const EventSlugRouteWithChildren = EventSlugRoute._addFileChildren(
@@ -271,6 +270,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   EventSlugRoute: EventSlugRouteWithChildren,
+  EventSlugLiveRoute: EventSlugLiveRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

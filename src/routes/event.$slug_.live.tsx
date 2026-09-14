@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { refreshPhotoUrlsStrict } from "@/lib/storage";
+import { getLivePresentation } from "@/lib/live-presentation.functions";
 import { normalizeEventTheme, type EventThemeSlug } from "@/lib/event-theme";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +26,7 @@ type EventRow = {
 };
 type PhotoRow = { id: string; photo_url: string; media_type: string; created_at: string };
 
-export const Route = createFileRoute("/event/$slug/live")({
+export const Route = createFileRoute("/event/$slug_/live")({
   component: LiveSlideshow,
   loader: ({ params }) => ({ slug: params.slug }),
   head: () => ({
@@ -54,50 +55,37 @@ function LiveSlideshow() {
   const [connection, setConnection] = useState<"connecting" | "live" | "polling">("connecting");
   const [previous, setPrevious] = useState<PhotoRow | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
+  const fetchPresentation = useServerFn(getLivePresentation);
 
-  const loadPhotos = useCallback(async (eventId: string, initial = false) => {
-    const { data, error: photosError } = await supabase
-      .from("photos")
-      .select("id, photo_url, media_type, created_at")
-      .eq("event_id", eventId)
-      .eq("hidden", false)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (photosError) throw photosError;
-    const rows = await refreshPhotoUrlsStrict((data ?? []) as PhotoRow[]);
+  const loadPhotos = useCallback(async () => {
+    const result = await fetchPresentation({ data: { slug } });
+    if (!result) throw new Error("Evento não encontrado.");
+    const rows = result.photos as PhotoRow[];
     rows.forEach((photo) => seenRef.current.add(photo.id));
     setPhotos(rows);
-  }, []);
+    return result;
+  }, [fetchPresentation, slug]);
 
   const loadEvent = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const { data, error: eventError } = await supabase
-      .from("events")
-      .select("id, name, slug, bg_url, theme_slug")
-      .eq("slug", slug)
-      .maybeSingle();
-    if (eventError) {
-      setError("Não foi possível abrir este evento agora.");
-      setLoading(false);
-      return;
-    }
-    if (!data) {
-      setError("Evento não encontrado.");
-      setLoading(false);
-      return;
-    }
-    const nextEvent = { ...data, theme_slug: normalizeEventTheme(data.theme_slug) } as EventRow;
-    setEvent(nextEvent);
-    seenRef.current.clear();
-    setIdx(0);
     try {
-      await loadPhotos(nextEvent.id, true);
-    } catch {
-      setError("As fotos não puderam ser carregadas. Tente novamente.");
+      const result = await loadPhotos();
+      const data = result.event;
+      const nextEvent = { ...data, theme_slug: normalizeEventTheme(data.theme_slug) } as EventRow;
+      setEvent(nextEvent);
+      seenRef.current.clear();
+      result.photos.forEach((photo) => seenRef.current.add(photo.id));
+      setIdx(0);
+    } catch (loadError) {
+      if (loadError instanceof Error && loadError.message === "Evento não encontrado.") {
+        setError("Evento não encontrado.");
+      } else {
+        setError("As fotos não puderam ser carregadas. Tente novamente.");
+      }
     }
     setLoading(false);
-  }, [loadPhotos, slug]);
+  }, [loadPhotos]);
 
   useEffect(() => {
     loadEvent();
@@ -126,22 +114,14 @@ function LiveSlideshow() {
           const p = payload.new as PhotoRow & { hidden?: boolean };
           if (p.hidden || seenRef.current.has(p.id)) return;
           seenRef.current.add(p.id);
-          refreshPhotoUrlsStrict([p])
-            .then(([fresh]) => {
-              if (!fresh) return;
-              const image = fresh.media_type === "video" ? null : new Image();
-              if (image) image.src = fresh.photo_url;
-              setPhotos((current) =>
-                [fresh, ...current.filter((item) => item.id !== fresh.id)].slice(0, 200),
-              );
-              setIdx(0);
-            })
+          loadPhotos()
+            .then(() => setIdx(0))
             .catch(() => setConnection("polling"));
         },
       )
       .subscribe((status) => setConnection(status === "SUBSCRIBED" ? "live" : "connecting"));
     const poll = window.setInterval(() => {
-      loadPhotos(event.id)
+      loadPhotos()
         .then(() => setConnection((current) => (current === "live" ? current : "polling")))
         .catch(() => setConnection("polling"));
     }, 10000);
