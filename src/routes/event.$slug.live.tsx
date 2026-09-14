@@ -137,7 +137,7 @@ function LiveSlideshow() {
   }, []);
 
   const bg = useMemo(
-    () => (event.bg_url ? { backgroundImage: `url(${event.bg_url})` } : undefined),
+    () => (event.bg_url ? { backgroundImage: `linear-gradient(var(--event-wash), var(--event-wash)), url("${event.bg_url}")` } : undefined),
     [event?.bg_url],
   );
 
@@ -195,7 +195,7 @@ function LiveSlideshow() {
           </div>
         ) : (
           <>
-            {previous && previous.id !== current.id && <LiveMedia media={previous} className="absolute inset-3 sm:inset-8 opacity-0 transition-opacity duration-700" />}
+            {previous && previous.id !== current.id && <LiveMedia media={previous} className="absolute inset-3 sm:inset-8 m-auto opacity-0 transition-opacity duration-700" />}
             <LiveMedia media={current} className="live-photo-enter relative z-10" />
             {photos.length > 1 && <>
               <Button variant="secondary" size="icon" className="absolute left-3 sm:left-6 z-20 rounded-full bg-background/65 backdrop-blur" onClick={() => move(-1)} title="Anterior"><ChevronLeft /></Button>
