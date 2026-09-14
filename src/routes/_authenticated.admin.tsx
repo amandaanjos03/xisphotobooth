@@ -21,6 +21,7 @@ import QRCode from "qrcode";
 import { toast } from "sonner";
 import xisLogo from "@/assets/xis-logo.png.asset.json";
 import { downloadEventCardPdf } from "@/lib/exports";
+import { EVENT_THEMES, normalizeEventTheme, type EventThemeSlug } from "@/lib/event-theme";
 
 type PrintLayout = "portrait" | "landscape" | "a4";
 type OverlayType = "frame" | "logo";
@@ -47,6 +48,7 @@ type EventRow = {
   view_count: number;
   download_count: number;
   instagram_filter_url: string | null;
+  theme_slug: EventThemeSlug;
 };
 
 type GenericFrameRow = { id: string; name: string; image_url: string };
@@ -156,6 +158,7 @@ function AdminDashboard() {
         requires_code: ev.requires_code,
         owner_id: user.id,
         instagram_filter_url: ev.instagram_filter_url,
+        theme_slug: normalizeEventTheme(ev.theme_slug),
       };
       const { data, error } = await supabase
         .from("events")
@@ -397,6 +400,7 @@ function EventFormFields({
     logoSize: number;
     requireCode: boolean;
     instagramUrl: string;
+    themeSlug: EventThemeSlug;
     frame: File | null;
     extraFrameFiles: File[];
     selectedGenericFrameIds: string[];
@@ -444,6 +448,32 @@ function EventFormFields({
           placeholder="Boas-vindas ao casamento! Capture momentos e divirta-se."
         />
         <p className="text-xs text-muted-foreground">Aparece para os convidados na tela inicial da cabine.</p>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <Label>Identidade visual do link</Label>
+          <p className="mt-1 text-xs text-muted-foreground">Escolha o clima da cabine e da apresentação ao vivo.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {EVENT_THEMES.map((theme) => {
+            const selected = values.themeSlug === theme.slug;
+            return (
+              <Button
+                key={theme.slug}
+                type="button"
+                variant="outline"
+                className={`h-auto min-h-24 flex-col items-stretch gap-2 p-3 text-left whitespace-normal ${selected ? "ring-2 ring-primary border-primary" : ""}`}
+                onClick={() => onChange({ themeSlug: theme.slug })}
+              >
+                <span className="flex gap-1" aria-hidden="true">
+                  {theme.swatches.map((swatch) => <span key={swatch} className={`h-5 flex-1 rounded-sm ${swatch}`} />)}
+                </span>
+                <span className="font-semibold leading-tight">{theme.name}</span>
+                <span className="text-[11px] font-normal text-muted-foreground leading-snug">{theme.description}</span>
+              </Button>
+            );
+          })}
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Fotos por moldura</Label>
@@ -721,6 +751,7 @@ function CreateEventDialog({
   const [logoSize, setLogoSize] = useState<number>(25);
   const [requireCode, setRequireCode] = useState<boolean>(true);
   const [instagramUrl, setInstagramUrl] = useState<string>("");
+  const [themeSlug, setThemeSlug] = useState<EventThemeSlug>("minimal");
   const [frame, setFrame] = useState<File | null>(null);
   const [extraFrameFiles, setExtraFrameFiles] = useState<File[]>([]);
   const [selectedGenericFrameIds, setSelectedGenericFrameIds] = useState<string[]>([]);
@@ -788,6 +819,7 @@ function CreateEventDialog({
         owner_id: ownerId,
         requires_code: requireCode,
         instagram_filter_url: instagramUrl.trim() || null,
+        theme_slug: themeSlug,
       };
       const { data, error } = await supabase
         .from("events")
@@ -848,7 +880,7 @@ function CreateEventDialog({
         <EventFormFields
           values={{
             name, date, photoCount, description, printLayout,
-            overlayType, logoPosition, logoSize, requireCode, instagramUrl,
+            overlayType, logoPosition, logoSize, requireCode, instagramUrl, themeSlug,
             frame, logo, bg, framePreview, logoPreview, bgPreview,
             extraFrameFiles, selectedGenericFrameIds,
           }}
@@ -863,6 +895,7 @@ function CreateEventDialog({
             if (p.logoSize !== undefined) setLogoSize(p.logoSize);
             if (p.requireCode !== undefined) setRequireCode(p.requireCode);
             if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
+            if (p.themeSlug !== undefined) setThemeSlug(p.themeSlug);
             if (p.frame !== undefined) setFrame(p.frame);
             if (p.extraFrameFiles !== undefined) setExtraFrameFiles(p.extraFrameFiles);
             if (p.selectedGenericFrameIds !== undefined) setSelectedGenericFrameIds(p.selectedGenericFrameIds);
@@ -895,6 +928,7 @@ function EditEventDialog({
   const [logoSize, setLogoSize] = useState<number>(25);
   const [requireCode, setRequireCode] = useState<boolean>(true);
   const [instagramUrl, setInstagramUrl] = useState<string>("");
+  const [themeSlug, setThemeSlug] = useState<EventThemeSlug>("minimal");
   const [frame, setFrame] = useState<File | null>(null);
   const [extraFrameFiles, setExtraFrameFiles] = useState<File[]>([]);
   const [selectedGenericFrameIds, setSelectedGenericFrameIds] = useState<string[]>([]);
@@ -919,6 +953,7 @@ function EditEventDialog({
     setLogoSize(event.logo_size ?? 25);
     setRequireCode(event.requires_code ?? true);
     setInstagramUrl(event.instagram_filter_url ?? "");
+    setThemeSlug(normalizeEventTheme(event.theme_slug));
     setFrame(null);
     setExtraFrameFiles([]);
     setSelectedGenericFrameIds([]);
@@ -990,6 +1025,7 @@ function EditEventDialog({
         logo_size: logoSize,
         requires_code: requireCode,
         instagram_filter_url: instagramUrl.trim() || null,
+        theme_slug: themeSlug,
       };
       const existingCode = eventAccessCode(event);
       let nextCode: string | null | undefined = undefined;
@@ -1067,7 +1103,7 @@ function EditEventDialog({
           <EventFormFields
             values={{
               name, date, photoCount, description, printLayout,
-              overlayType, logoPosition, logoSize, requireCode, instagramUrl,
+              overlayType, logoPosition, logoSize, requireCode, instagramUrl, themeSlug,
               frame, logo, bg, framePreview, logoPreview, bgPreview,
               extraFrameFiles, selectedGenericFrameIds, existingExtraFrames,
               existingFrameUrl: event?.frame_url ?? null,
@@ -1085,6 +1121,7 @@ function EditEventDialog({
               if (p.logoSize !== undefined) setLogoSize(p.logoSize);
               if (p.requireCode !== undefined) setRequireCode(p.requireCode);
               if (p.instagramUrl !== undefined) setInstagramUrl(p.instagramUrl);
+              if (p.themeSlug !== undefined) setThemeSlug(p.themeSlug);
               if (p.frame !== undefined) setFrame(p.frame);
               if (p.extraFrameFiles !== undefined) setExtraFrameFiles(p.extraFrameFiles);
               if (p.selectedGenericFrameIds !== undefined) setSelectedGenericFrameIds(p.selectedGenericFrameIds);

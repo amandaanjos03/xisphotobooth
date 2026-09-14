@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoViewer, downloadPhoto, printPhoto } from "@/components/PhotoViewer";
+import { normalizeEventTheme, type EventThemeSlug } from "@/lib/event-theme";
 
 type PrintLayout = "portrait" | "landscape" | "a4";
 type OverlayType = "frame" | "logo";
@@ -34,6 +35,7 @@ type EventRow = {
   logo_size: number;
   requires_code: boolean;
   instagram_filter_url: string | null;
+  theme_slug: EventThemeSlug;
 };
 
 type ExtraFrame = { id: string; frame_url: string; name: string | null };
@@ -58,7 +60,7 @@ export const Route = createFileRoute("/event/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code, instagram_filter_url")
+      .select("id, name, slug, date, frame_url, bg_url, description, print_layout, photo_count, overlay_type, logo_url, logo_position, logo_size, requires_code, instagram_filter_url, theme_slug")
       .eq("slug", params.slug)
       .maybeSingle();
     if (error) throw error;
@@ -196,8 +198,8 @@ function BoothPage() {
 
   return (
     <div
-      className="min-h-screen bg-blob bg-cover bg-center bg-no-repeat"
-      style={event.bg_url ? { backgroundImage: `linear-gradient(oklch(0.965 0.05 98 / 0.78), oklch(0.965 0.05 98 / 0.88)), url("${event.bg_url}")` } : undefined}
+      className={`event-theme theme-${normalizeEventTheme(event.theme_slug)} min-h-screen bg-cover bg-center bg-no-repeat`}
+      style={event.bg_url ? { backgroundImage: `linear-gradient(var(--event-wash), var(--event-wash)), url("${event.bg_url}")` } : undefined}
     >
       <PrintPageStyle layout={event.print_layout ?? "portrait"} />
       <header className="no-print border-b border-border/50 bg-background/60 backdrop-blur-sm">
@@ -384,7 +386,7 @@ function Welcome({
       <div className="mt-10 flex flex-col items-center justify-center gap-3">
         <button
           onClick={onStart}
-          className="inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.42_0.075_188/0.55)] transition active:scale-95 hover:opacity-95"
+         className="inline-flex items-center gap-3 rounded-full bg-primary px-10 py-5 sm:px-14 sm:py-6 text-xl sm:text-2xl font-semibold text-primary-foreground shadow-lg transition active:scale-95 hover:opacity-95"
         >
           <Camera className="size-6 sm:size-7" />
           Tirar Fotos (com cabine)
